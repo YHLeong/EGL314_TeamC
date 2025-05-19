@@ -1,17 +1,8 @@
 import random
 
-def rng_app(min_value=1, max_value=100):
-    print(f"Generating a random number between {min_value} and {max_value}...")
-    random_number = random.randint(min_value, max_value)
-    print(f"Generated Number: {random_number}")
+def rng_app(count=4, min_value=1, max_value=6):
+    numbers = [random.randint(min_value, max_value) for _ in range(count)]
+    print(f"Generated Numbers: {', '.join(map(str, numbers))}")
 
 if __name__ == '__main__':
-    try:
-        min_val = int(input("Enter the minimum value: "))
-        max_val = int(input("Enter the maximum value: "))
-        if min_val < max_val:
-            rng_app(min_val, max_val)
-        else:
-            print("Minimum value must be less than maximum value.")
-    except ValueError:
-        print("Please enter valid integers.")
+    rng_app()
