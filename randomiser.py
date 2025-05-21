@@ -1,55 +1,45 @@
 import RPi.GPIO as GPIO
 import tkinter as tk
 import random
-import time
 
-# Sensor mapping: Sensor numbers 1-6 mapped to GPIO pins
+# Map sensor numbers (1–6) to GPIO pins.
 SENSOR_MAP = {1: 5, 2: 6, 3: 19, 4: 16, 5: 20, 6: 21}
-SENSOR_PINS = list(SENSOR_MAP.values())  # Extract the pin numbers for GPIO setup
 
-# GPIO setup
+# Setup GPIO
 GPIO.setmode(GPIO.BCM)
-for pin in SENSOR_PINS:
+for pin in SENSOR_MAP.values():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Tkinter setup
 root = tk.Tk()
 root.title("Sensor Randomizer")
+tk.Label(root, text="Press the displayed sensor!", font=("Arial", 16)).pack(pady=10)
+sensor_label = tk.Label(root, text="Waiting...", font=("Arial", 14))
+sensor_label.pack(pady=10)
 
-status_label = tk.Label(root, text="Press the displayed sensor!", font=("Arial", 16))
-status_label.grid(row=0, column=0, pady=10)
+current_sensor = None  # Currently displayed sensor number
+waiting = False       # Flag to prevent repeated triggering
 
-
-sensor_label = tk.Label(root, text="Waiting...", font=("Arial", 16))
-status_label.grid(row=0, column=0, pady=10)
-
-current_sensor = None  # Store the currently displayed sensor
-
-# Select and display a single random sensor.
 def randomize_sensor():
-    global current_sensor
-    current_sensor = random.choice(list(SENSOR_MAP.keys()))  # Pick sensor number
+    global current_sensor, waiting
+    waiting = False
+    current_sensor = random.choice(list(SENSOR_MAP))  # Select one random sensor number
     sensor_label.config(text=f"Press sensor {current_sensor}")
-    root.update()
 
-# Check if the correct sensor has been pressed before randomising again.
-def check_sensor_press():
-    global current_sensor
+def check_sensor():
+    global waiting
+    if not waiting and current_sensor is not None:
+        # Check the corresponding GPIO pin, LOW means pressed.
+        if GPIO.input(SENSOR_MAP[current_sensor]) == GPIO.LOW:
+            print(f"Sensor {current_sensor} pressed!")
+            waiting = True  # Prevent further checks until new sensor is randomized.
+            root.after(2000, randomize_sensor)  # Wait 2 seconds, then randomize.
+    root.after(100, check_sensor)  # Check sensor input every 100ms
 
-    correct_pin = SENSOR_MAP[current_sensor]  # Get the corresponding GPIO pin
-
-    if GPIO.input(correct_pin) == GPIO.LOW:
-        print(f"Sensor {current_sensor} pressed!")  # Debugging print
-        time.sleep(2)  # 2-second delay before a new sensor is selected
-        randomize_sensor()  # Choose the next sensor
-
-    root.after(100, check_sensor_press)  # checking of sensor input
-
-# Start the program by selecting an initial sensor
+# Start by randomizing the first sensor and initiating the check loop.
 randomize_sensor()
-check_sensor_press()  # Start monitoring sensor presses
+check_sensor()
 
-# Run the GUI
 try:
     root.mainloop()
 finally:
