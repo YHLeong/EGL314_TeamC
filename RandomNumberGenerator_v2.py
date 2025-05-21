@@ -1,10 +1,9 @@
 import random
-import keyboard  # pip install keyboard
+import keyboard  
 import time
 
-# Initial sequence length
 seq_length = 4
-direction = 1  # 1 = increasing, -1 = decreasing
+direction = 1 
 
 print("Press 'a' to generate a random sequence. Press 'q' to quit.")
 
@@ -14,11 +13,9 @@ while True:
         break
 
     if keyboard.is_pressed("a"):
-        # Generate and print random sequence
         sequence = [random.randint(1, 6) for _ in range(seq_length)]
         print(f"Generated sequence ({seq_length} numbers): {sequence}")
 
-        # Update sequence length
         if direction == 1:
             if seq_length < 6:
                 seq_length += 1
@@ -32,4 +29,4 @@ while True:
                 direction = 1
                 seq_length += 1
 
-        time.sleep(0.3)  # debounce delay
+        time.sleep(0.3)  
