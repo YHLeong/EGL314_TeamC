@@ -21,5 +21,5 @@ Players must replicate a pre-defined glyph activation sequence, demonstrated thr
 - Sensor Signal Detector 
 
 ## System Diagram
-![System Diagram](AssetsFolder/system_diagram.png)
+![System Diagram](AssetsFolder/system_diagram_test2.png)
 ## Code Logic
