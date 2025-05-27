@@ -21,15 +21,5 @@ Players must replicate a pre-defined glyph activation sequence, demonstrated thr
 - Sensor Signal Detector 
 
 ## System Diagram
-::: mermaid
-flowchart LR
-  Sensor1 --> RaspberryPi --> QL1
-  Sensor2 --> RaspberryPi
-  Sensor3 --> RaspberryPi
-  Sensor4 --> RaspberryPi
-  Sensor5 --> RaspberryPi
-  Sensor6 --> RaspberryPi
-
-  RaspberryPi --> grandMA3
-:::
+![System Diagram](AssetsFolder/system_diagram.png)
 ## Code Logic
