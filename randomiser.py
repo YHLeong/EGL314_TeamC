@@ -34,7 +34,7 @@ def check_sensor():
             print(f"Sensor {current_sensor} pressed!")
             waiting = True  # Prevent further checks until new sensor is randomized.
             root.after(2000, randomize_sensor)  # Wait 2 seconds, then randomize.
-    root.after(100, check_sensor)  # Check sensor input every 100ms
+    root.after(500, check_sensor)  # Check sensor input every 100ms
 
 # Start by randomizing the first sensor and initiating the check loop.
 randomize_sensor()
