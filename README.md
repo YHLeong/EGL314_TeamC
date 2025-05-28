@@ -51,7 +51,7 @@ This Python script continuously generates and prints sequences of random integer
 
 ---
 
-### 📚 Libraries Used
+### 📚 Python Packages Used
 ```
 import random
 import time
