@@ -1,0 +1,27 @@
+# EGL314 Team C (System Diagram)
+
+```mermaid
+graph LR
+
+
+
+    Sensor1 --One Wire(5)----> RaspberryPi
+    Sensor2 --One Wire(6)----> RaspberryPi
+    Sensor3 --One Wire(19)----> RaspberryPi
+    Sensor4 --One Wire(16)----> RaspberryPi
+    Sensor5 --One Wire(20)----> RaspberryPi
+    Sensor6 --One Wire(21)----> RaspberryPi
+
+    RaspberryPi --LAN--> Router
+    Router --LAN--> GrandMA3
+    Router --LAN--> Yamaha_QL1
+
+    GrandMA3 --LAN--> sCAN
+    sCAN --DMX --> Lighting_fixures
+    Yamaha_QL1 --DANTE(LAN)--> Yamaha_MTX-5
+    Yamaha_MTX-5 --Terminal Block--> Yamaha_VXS5_#1
+    Yamaha_MTX-5 --Terminal Block--> Yamaha_VXS5_#12
+    
+
+
+```
