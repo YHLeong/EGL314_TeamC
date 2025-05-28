@@ -44,7 +44,7 @@ Players will:
 
 ## 💡 Code Logic
 
-### 🎲 Random Number Generator
+### 🎲 Random Number Generator - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%202%20sprint%201/RandomNumberGenerator_v4.py)
 #### 🧾 Overview
 
 This Python script continuously generates and prints sequences of random integers. Each sequence has a length that cycles through **4**, **8**, and **12**, refreshing every **1 second** until the user stops the script with **Ctrl+C**.
@@ -64,7 +64,7 @@ Function Used: random.randint(a, b) returns a random integer N such that a <= N 
 ##### ⏰time
 Purpose: Provides time-related functions. 
 <br>
-Function Used: time.sleep(seconds) pauses execution of the program for the given number of seconds.
+Function Used: time.sleep(seconds) pauses program execution for the given number of seconds.
 
 #### 🔄Index Tracker
 
@@ -117,6 +117,8 @@ time.sleep(1)
 except KeyboardInterrupt:
     print("\nExiting... Program stopped by user.")
 ```
-- Allows the user to stop the program gracefully using Ctrl+C.
+- Allows the user to stop the program gracefully using Ctrl + C.
 - Catches the KeyboardInterrupt exception and prints a message before exiting.
+---
+
 
