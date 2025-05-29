@@ -48,7 +48,8 @@ timer_label = tk.Label(root, text="", font=("Arial", 20), fg="red")
 timer_label.pack(pady=10)
 
 def show_sequence_step_by_step(seq):
-    # Display each sequence number one by one, and then start sensor monitoring and the timer.
+    # Hide the timer while showing the sequence
+    timer_label.pack_forget()
     def show_next(index):
         if index < len(seq):
             sequence_label.config(text=f"Sequence Number {index + 1}: {seq[index]}")
@@ -56,6 +57,7 @@ def show_sequence_step_by_step(seq):
         else:
             sequence_label.config(text="Repeat the sequence using sensors!")
             start_sensor_monitoring()
+            timer_label.pack(pady=10)  # Show the timer label when the timer starts
             start_timer(len(seq))  # Timer starts only after sequence is fully shown.
     show_next(0)
 
