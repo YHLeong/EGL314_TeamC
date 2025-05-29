@@ -48,6 +48,7 @@ timer_label = tk.Label(root, text="", font=("Arial", 20), fg="red")
 timer_label.pack(pady=10)
 
 def show_sequence_step_by_step(seq):
+    # Display each sequence number one by one, and then start sensor monitoring and the timer.
     def show_next(index):
         if index < len(seq):
             sequence_label.config(text=f"Sequence Number {index + 1}: {seq[index]}")
@@ -55,7 +56,7 @@ def show_sequence_step_by_step(seq):
         else:
             sequence_label.config(text="Repeat the sequence using sensors!")
             start_sensor_monitoring()
-            start_timer(len(seq))
+            start_timer(len(seq))  # Timer starts only after sequence is fully shown.
     show_next(0)
 
 def start_sensor_monitoring():
@@ -118,9 +119,11 @@ def generate_sequence_and_wait(length):
     root.after(0, lambda: result_label.config(text=""))
     root.after(0, lambda: [label.config(text=f"Sensor {num} (Pin {pin}): Waiting...") for num, pin in SENSOR_MAP.items()])
     root.after(0, lambda: labels_frame.pack_forget())
-    time.sleep(1)
-    root.after(0, lambda seq=current_sequence: show_sequence_step_by_step(seq))
+    
+    # Use root.after() instead of time.sleep() to let the GUI update before showing the sequence.
+    root.after(1000, lambda seq=current_sequence: show_sequence_step_by_step(seq))
 
+    # Wait until the sequence is completed or the timer fails.
     while not (sequence_completed.is_set() or timer_failed.is_set()):
         time.sleep(0.1)
 
@@ -147,5 +150,6 @@ try:
     root.mainloop()
 finally:
     GPIO.cleanup()
+
 
 
