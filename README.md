@@ -204,9 +204,11 @@ def show_sequence_step_by_step(seq):
         else:
             sequence_label.config(text="Repeat the sequence using sensors!")
             start_sensor_monitoring()
+            start_timer(len(seq))
     show_next(0)
 ```
-- Displays one number per second in the GUI using root.after().
+- Uses root.after() to show each number every second.
+- Timer starts after the sequence is completely shown.
 
 ### 🧠 Sensor Monitoring
 ```
@@ -229,9 +231,9 @@ def update_sensor_status():
             last_pressed[pin] = pin_state
         root.after(100, update_sensor_status)
 ```
-- Continuously checks the GPIO inputs every 100ms.
-- Uses debounce logic (0.5s delay) to avoid multiple triggers.
-- Detects a valid press (falling edge) and records it.
+- Polls GPIO every 100ms to check for button presses.
+- Debounce delay prevents duplicate inputs.
+- Tracks valid sensor activations and compares against sequence.
 
 ### ✔️ Sequence Validation
 ```
@@ -246,10 +248,29 @@ def check_user_sequence():
             text=f"❌ Wrong sequence!\nExpected: {current_sequence}\nYou: {user_input}",
             fg="red"
         )
+        timer_failed.set()
 ```
 - Compares user input with the generated sequence.
 - Displays ✅ if correct, ❌ with expected/actual if wrong.
 - Triggers next round or ends the game.
+
+### ⏱️ Countdown Timer
+```
+def start_timer(seq_length):
+    total_time = TIMER_MAP.get(seq_length, 30)
+    def countdown():
+        nonlocal total_time
+        while total_time > 0 and not sequence_completed.is_set():
+            mins, secs = divmod(total_time, 60)
+            timer_label.config(text=f"⏳ Time Left: {mins:02d}:{secs:02d}")
+            time.sleep(1)
+            total_time -= 1
+        if not sequence_completed.is_set():
+            timer_label.config(text="⏰ Time's up!")
+            timer_failed.set()
+```
+- The timer starts only after the sequence is shown.
+- Counts down in real time and ends the round on timeout.
 ---
 
 ### 🧵 Threaded Execution
