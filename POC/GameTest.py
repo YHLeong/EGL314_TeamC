@@ -97,6 +97,7 @@ def check_user_sequence():
     else:
         result_label.config(text=f"❌ Wrong sequence!\nExpected: {current_sequence}\nYou: {user_input}", fg="red")
         timer_failed.set()
+        timer_label.config(text="")  # Reset timer label when guess is wrong
 
 def start_timer(seq_length):
     total_time = TIMER_MAP.get(seq_length, 30)
@@ -110,6 +111,8 @@ def start_timer(seq_length):
         if not sequence_completed.is_set():
             timer_label.config(text="⏰ Time's up!")
             timer_failed.set()
+            time.sleep(1)
+            timer_label.config(text="")  # Reset timer label when time runs out
     threading.Thread(target=countdown, daemon=True).start()
 
 def generate_sequence_and_wait(length):
