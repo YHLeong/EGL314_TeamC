@@ -21,6 +21,13 @@ root.title("Sensor Sequence Challenge")
 sequence_label = tk.Label(root, text="Generated Sequence: ", font=("Arial", 18), fg="blue")
 sequence_label.pack(pady=20)
 
+# Level label
+level_label = tk.Label(root, text="", font=("Arial", 16), fg="purple")
+level_label.pack(pady=5)
+
+stage_label = tk.Label(root, text="", font=("Arial", 16), fg="brown")
+stage_label.pack(pady=5)
+
 result_label = tk.Label(root, text="", font=("Arial", 16), fg="green")
 result_label.pack(pady=10)
 
@@ -32,8 +39,11 @@ for sensor_num, pin in sorted(SENSOR_MAP.items()):
     labels[sensor_num] = label
 
 # Game State
-sequence_stages = [4, 8, 12]
-TIMER_MAP = {4: 30, 8: 60, 12: 90}
+LEVELS = [
+    {"length": 4, "name": "Easy", "timer": 30},
+    {"length": 8, "name": "Medium", "timer": 60},
+    {"length": 12, "name": "Hard", "timer": 90},
+]
 current_sequence = []
 user_input = []
 sensor_monitoring_enabled = False
@@ -47,18 +57,17 @@ timer_failed = threading.Event()
 timer_label = tk.Label(root, text="", font=("Arial", 20), fg="red")
 timer_label.pack(pady=10)
 
-def show_sequence_step_by_step(seq):
-    # Hide the timer while showing the sequence
+def show_sequence_step_by_step(seq, reveal_len):
     timer_label.pack_forget()
     def show_next(index):
-        if index < len(seq):
+        if index < reveal_len:
             sequence_label.config(text=f"Sequence Number {index + 1}: {seq[index]}")
             root.after(1000, show_next, index + 1)
         else:
             sequence_label.config(text="Repeat the sequence using sensors!")
             start_sensor_monitoring()
-            timer_label.pack(pady=10)  # Show the timer label when the timer starts
-            start_timer(len(seq))  # Timer starts only after sequence is fully shown.
+            timer_label.pack(pady=10)
+            start_timer(reveal_len)
     show_next(0)
 
 def start_sensor_monitoring():
@@ -97,10 +106,15 @@ def check_user_sequence():
     else:
         result_label.config(text=f"❌ Wrong sequence!\nExpected: {current_sequence}\nYou: {user_input}", fg="red")
         timer_failed.set()
-        timer_label.config(text="")  # Reset timer label when guess is wrong
+        timer_label.config(text="")
 
 def start_timer(seq_length):
-    total_time = TIMER_MAP.get(seq_length, 30)
+    # Find timer for current level
+    total_time = 30
+    for lvl in LEVELS:
+        if seq_length <= lvl["length"]:
+            total_time = lvl["timer"]
+            break
     def countdown():
         nonlocal total_time
         while total_time > 0 and not sequence_completed.is_set():
@@ -112,42 +126,40 @@ def start_timer(seq_length):
             timer_label.config(text="⏰ Time's up!")
             timer_failed.set()
             time.sleep(1)
-            timer_label.config(text="")  # Reset timer label when time runs out
+            timer_label.config(text="")
     threading.Thread(target=countdown, daemon=True).start()
 
-def generate_sequence_and_wait(length):
+def generate_sequence_and_wait(sequence, reveal_len, level_name, stage_num, stage_max):
     global current_sequence
-    current_sequence = [random.randint(1, 6) for _ in range(length)]
+    current_sequence = sequence[:reveal_len]
     sequence_completed.clear()
     timer_failed.clear()
+    root.after(0, lambda: level_label.config(text=f"Level: {level_name}"))
+    root.after(0, lambda: stage_label.config(text=f"Stage: {stage_num}/{stage_max}"))
     root.after(0, lambda: sequence_label.config(text="Generating sequence..."))
     root.after(0, lambda: result_label.config(text=""))
     root.after(0, lambda: [label.config(text=f"Sensor {num} (Pin {pin}): Waiting...") for num, pin in SENSOR_MAP.items()])
     root.after(0, lambda: labels_frame.pack_forget())
-    
-    # Use root.after() instead of time.sleep() to let the GUI update before showing the sequence.
-    root.after(1000, lambda seq=current_sequence: show_sequence_step_by_step(seq))
-
-    # Wait until the sequence is completed or the timer fails.
+    root.after(1000, lambda: show_sequence_step_by_step(sequence, reveal_len))
     while not (sequence_completed.is_set() or timer_failed.is_set()):
         time.sleep(0.1)
-
     return sequence_completed.is_set()
 
 def run_sequence_challenge():
-    while True:
-        for length in sequence_stages:
-            success = generate_sequence_and_wait(length)
+    for lvl in LEVELS:
+        seq_len = lvl["length"]
+        level_name = lvl["name"]
+        sequence = [random.randint(1, 6) for _ in range(seq_len)]
+        for stage in range(1, seq_len + 1):
+            success = generate_sequence_and_wait(sequence, stage, level_name, stage, seq_len)
             if not success:
-                root.after(0, lambda: sequence_label.config(text="🔁 Sequence Failed. Restarting..."))
-                root.after(0, lambda: result_label.config(text="Try Again from the Beginning", fg="orange"))
+                root.after(0, lambda: sequence_label.config(text="🔁 Sequence Failed. Restarting Level..."))
+                root.after(0, lambda: result_label.config(text="Try Again from the Beginning of This Level", fg="orange"))
                 time.sleep(3)
-                break
+                return run_sequence_challenge()  # Restart from the beginning
             time.sleep(2)
-        else:
-            root.after(0, lambda: sequence_label.config(text="🎉 All sequences complete!"))
-            root.after(0, lambda: result_label.config(text="Game Over!", fg="blue"))
-            break
+    root.after(0, lambda: sequence_label.config(text="🎉 All sequences complete!"))
+    root.after(0, lambda: result_label.config(text="Game Over!", fg="blue"))
 
 threading.Thread(target=run_sequence_challenge, daemon=True).start()
 
@@ -155,6 +167,3 @@ try:
     root.mainloop()
 finally:
     GPIO.cleanup()
-
-
-
