@@ -21,6 +21,13 @@ root.title("Sensor Sequence Challenge")
 sequence_label = tk.Label(root, text="Generated Sequence: ", font=("Arial", 18), fg="blue")
 sequence_label.pack(pady=20)
 
+# Level label
+level_label = tk.Label(root, text="", font=("Arial", 16), fg="purple")
+level_label.pack(pady=5)
+
+stage_label = tk.Label(root, text="", font=("Arial", 16), fg="brown")
+stage_label.pack(pady=5)
+
 result_label = tk.Label(root, text="", font=("Arial", 16), fg="green")
 result_label.pack(pady=10)
 
@@ -32,7 +39,8 @@ for sensor_num, pin in sorted(SENSOR_MAP.items()):
     labels[sensor_num] = label
 
 # Game State
-sequence_stages = [4, 8, 12]  # Easy, Medium, Hard levels
+sequence_stages = [4, 8, 12]
+TIMER_MAP = {4: 30, 8: 60, 12: 90}
 current_sequence = []
 user_input = []
 sensor_monitoring_enabled = False
@@ -42,14 +50,18 @@ last_press_time = {}
 DEBOUNCE_DELAY = 0.5
 sequence_completed = threading.Event()
 
-def show_partial_sequence(seq, length):
+def show_sequence_step_by_step(seq):
+    # Hide the timer while showing the sequence
+    timer_label.pack_forget()
     def show_next(index):
-        if index < length:
+        if index < len(seq):
             sequence_label.config(text=f"Sequence Number {index + 1}: {seq[index]}")
             root.after(1000, show_next, index + 1)
         else:
-            sequence_label.config(text=f"Repeat the first {length} sensor(s) using sensors!")
-            start_sensor_monitoring(length)
+            sequence_label.config(text="Repeat the sequence using sensors!")
+            start_sensor_monitoring()
+            timer_label.pack(pady=10)  # Show the timer label when the timer starts
+            start_timer(len(seq))  # Timer starts only after sequence is fully shown.
     show_next(0)
 
 def start_sensor_monitoring(expected_length):
@@ -87,47 +99,57 @@ def check_user_sequence():
     if user_input == expected:
         result_label.config(text="✅ Correct sequence!", fg="green")
     else:
-        result_label.config(text=f"❌ Wrong sequence!\nExpected: {expected}\nYou: {user_input}", fg="red")
-    sequence_completed.set()
+        result_label.config(text=f"❌ Wrong sequence!\nExpected: {current_sequence}\nYou: {user_input}", fg="red")
+        timer_failed.set()
+        timer_label.config(text="")  # Reset timer label when guess is wrong
 
-def generate_sequence(length):
-    return [random.randint(1, 6) for _ in range(length)]
+def start_timer(seq_length):
+    total_time = TIMER_MAP.get(seq_length, 30)
+    def countdown():
+        nonlocal total_time
+        while total_time > 0 and not sequence_completed.is_set():
+            mins, secs = divmod(total_time, 60)
+            timer_label.config(text=f"⏳ Time Left: {mins:02d}:{secs:02d}")
+            time.sleep(1)
+            total_time -= 1
+        if not sequence_completed.is_set():
+            timer_label.config(text="⏰ Time's up!")
+            timer_failed.set()
+            time.sleep(1)
+            timer_label.config(text="")  # Reset timer label when time runs out
+    threading.Thread(target=countdown, daemon=True).start()
+
+def generate_sequence_and_wait(length):
+    global current_sequence
+    current_sequence = [random.randint(1, 6) for _ in range(length)]
+    sequence_completed.clear()
+    timer_failed.clear()
+    root.after(0, lambda: sequence_label.config(text="Generating sequence..."))
+    root.after(0, lambda: result_label.config(text=""))
+    root.after(0, lambda: [label.config(text=f"Sensor {num} (Pin {pin}): Waiting...") for num, pin in SENSOR_MAP.items()])
+    root.after(0, lambda: labels_frame.pack_forget())
+    
+    # Use root.after() instead of time.sleep() to let the GUI update before showing the sequence.
+    root.after(1000, lambda seq=current_sequence: show_sequence_step_by_step(seq))
+
+    # Wait until the sequence is completed or the timer fails.
+    while not (sequence_completed.is_set() or timer_failed.is_set()):
+        time.sleep(0.1)
+
+    return sequence_completed.is_set()
 
 def run_sequence_challenge():
     while True:
-        for level_length in sequence_stages:
-            global current_sequence
-            current_sequence = generate_sequence(level_length)
-            sequence_completed.clear()
-            result_label.config(text="")
-            labels_frame.pack_forget()
-
-            for stage in range(1, level_length + 1):
-                sequence_completed.clear()
-                # Show partial sequence for current stage
-                root.after(0, lambda seq=current_sequence, l=stage: show_partial_sequence(seq, l))
-
-                # Wait until user completes input
-                while not sequence_completed.is_set():
-                    time.sleep(0.1)
-
-                expected = current_sequence[:stage]
-                if user_input != expected:
-                    root.after(0, lambda: sequence_label.config(text="🔁 Failed! Restarting from level 1..."))
-                    root.after(0, lambda: result_label.config(text="Try Again!", fg="orange"))
-                    time.sleep(3)
-                    break  # fail current level; restart game loop
-                else:
-                    time.sleep(1)  # pause before next stage
-            else:
-                # Completed all stages in this level, continue to next level
-                continue
-            # Failure happened, break level loop to restart from beginning
-            break
-
+        for length in sequence_stages:
+            success = generate_sequence_and_wait(length)
+            if not success:
+                root.after(0, lambda: sequence_label.config(text="🔁 Sequence Failed. Restarting..."))
+                root.after(0, lambda: result_label.config(text="Try Again from the Beginning", fg="orange"))
+                time.sleep(3)
+                break
+            time.sleep(2)
         else:
-            # All levels passed
-            root.after(0, lambda: sequence_label.config(text="🎉 All levels complete!"))
+            root.after(0, lambda: sequence_label.config(text="🎉 All sequences complete!"))
             root.after(0, lambda: result_label.config(text="Game Over!", fg="blue"))
             break
 
@@ -137,8 +159,6 @@ try:
     root.mainloop()
 finally:
     GPIO.cleanup()
-
-
 
 
 
