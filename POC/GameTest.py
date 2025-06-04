@@ -78,7 +78,7 @@ def cancel_round_timer():
 def on_timer_expire():
     global sensor_monitoring_enabled
     sensor_monitoring_enabled = False
-    result_label.config(text="⏰ Time's up! Game Over.", fg="red")
+    result_label.config(text="Time's up! Game Over.", fg="red")
     sequence_label.config(text="Game Over - You ran out of time.")
     cancel_round_timer()
 
@@ -168,15 +168,15 @@ def run_sequence_challenge():
 
             success = play_stage(full_sequence, steps)
             if not success:
-                root.after(0, lambda: sequence_label.config(text="🔁 Stage failed. Restarting game..."))
+                root.after(0, lambda: sequence_label.config(text="Stage failed. Restarting game..."))
                 root.after(0, lambda: result_label.config(text="Try again from Stage 1", fg="orange"))
                 time.sleep(3)
                 return
             stage_idx += 1
             time.sleep(2)
 
-    root.after(0, lambda: sequence_label.config(text="🎉 All Stages Complete!"))
-    root.after(0, lambda: result_label.config(text="🏁 Game Over!", fg="blue"))
+    root.after(0, lambda: sequence_label.config(text="All Stages Complete!"))
+    root.after(0, lambda: result_label.config(text="Game Over!", fg="blue"))
 
 threading.Thread(target=run_sequence_challenge, daemon=True).start()
 
