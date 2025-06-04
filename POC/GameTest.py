@@ -135,7 +135,7 @@ def run_sequence_challenge():
             break
         else:
             # Completed all levels successfully
-            root.after(0, lambda: sequence_label.config(text="🎉 All levels complete!"))
+            root.after(0, lambda: sequence_label.config(text="All levels complete!"))
             root.after(0, lambda: result_label.config(text="Game Over!", fg="blue"))
             stage_label.config(text="")
             level_label.config(text="")
