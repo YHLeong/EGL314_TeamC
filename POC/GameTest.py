@@ -5,7 +5,7 @@ import time
 import threading
 
 # Map sensor numbers to GPIO pins
-SENSOR_MAP = {1: 5, 2: 6, 3: 19, 4: 16, 5: 20, 6: 21}
+SENSOR_MAP = {1: 17, 2: 6, 3: 19, 4: 16, 5: 20, 6: 21}
 PIN_TO_SENSOR = {v: k for k, v in SENSOR_MAP.items()}
 SENSOR_PINS = list(SENSOR_MAP.values())
 
