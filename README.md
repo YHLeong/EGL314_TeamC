@@ -22,14 +22,17 @@ Players will:
 ## 🔌 Dependencies
 
 ### 🛠️ Hardware
-- 🖥️ 1x Raspberry Pi 4 Model B  
-- 🪑 6x AoKu AK-399 Car Seat Pressure Sensors  
-- 🔌 6x WAGO Connectors  
-- 🧵 13x Jumper Wires  
+-  1x Raspberry Pi 4 Model B  
+-  6x AoKu AK-399 Car Seat Pressure Sensors  
+-  6x WAGO Connectors  
+-  13x Jumper Wires
+-  2x LAN Cables
+-  6x Carboard Button
+-  1x Rasp Pi display V1
 
 ### 💻 Software
-- 🎲 Random Number Generator  
-- 📡 Sensor Signal Detector
+-  Random Number Generator  
+-  Sensor Signal Detector
 ---
 
 ## 🧭 System Diagram
@@ -122,7 +125,9 @@ except KeyboardInterrupt:
 ## Prove Of Concept
 ### 🧾 Overview
 
-This Python script creates an interactive sensor-based memory game using a **Raspberry Pi** and **Tkinter GUI**. The game generates random sequences, displays them one by one, and then waits for the player to replicate them using physical button presses (sensors). It progresses through sequences of length **4**, **8**, and **12**.
+This Python script implements a **progressive memory game** using a **Raspberry Pi** and **Tkinter GUI**. Players must memorize and replicate sequences shown on screen by pressing corresponding physical buttons connected via **GPIO pins**. The game consists of **multiple stages** with increasing sequence lengths, categorized into **Easy, Medium, and Hard** difficulty levels.
+
+
 
 ---
 
@@ -135,34 +140,37 @@ import time
 import threading 
 ```
 #### 📟 RPi.GPIO
-- **Purpose:** Controls and reads the Raspberry Pi’s GPIO pins.
-- **Functionality:** Configures pins for input and reads pin states.
+Purpose: Interface with Raspberry Pi’s physical GPIO pins.
+
+Used For: Configuring buttons as inputs and detecting button presses with debounce logic.
 
 #### 🖼️ tkinter
-- **Purpose:** Builds the graphical user interface (GUI).
-- **Functionality:** Displays the sequence, sensor status, and game results.
+- Purpose: Render and manage the GUI.
+- Used For: Displaying sequences, sensor statuses, timers, and results dynamically.
 
 #### 🎰 random
-- **Purpose:** Generates random sequences of sensor numbers.
-- **Function Used:** `random.randint(a, b)` for random integers.
+- Purpose: Sequence generation.
+- Used For: `random.randint(1, 6)` to create a randomized pattern of sensor numbers.
 
 #### ⏰ time
-- **Purpose:** Provides time-related functions like delays.
-- **Function Used:** `time.sleep(seconds)` and `time.time()`.
+- Purpose: Sleep timing and debouncing.
+- Used For: `time.sleep()`, `time.time()` to handle delays and debounce checks.
 
 #### 🧵 threading
-- **Purpose:** Allows the GUI and game logic to run concurrently without freezing.
-- **Function Used:** `threading.Thread`, `threading.Event`.
+- Purpose: Keep GUI responsive while running game logic.    
+- Used For: Running the main game function `(run_sequence_challenge)` in a separate thread.
 ---
 
 ### 🧭 GPIO Setup
 ```
-SENSOR_MAP = {1: 5, 2: 6, 3: 19, 4: 16, 5: 20, 6: 21}
+SENSOR_MAP = {1: 17, 2: 6, 3: 19, 4: 16, 5: 20, 6: 21}
 GPIO.setmode(GPIO.BCM)
+for pin in SENSOR_MAP.values():
+    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 ```
-- Maps sensor numbers to GPIO pins.
-- Configures pins as input with pull-up      resistors.
-- Uses BCM numbering mode.
+- Six sensors are mapped to GPIO pins.
+- Input pins use pull-up resistors (active-low).
+- BCM mode used for pin numbering.
 ---
 
 ### 🖥️ GUI Layout
@@ -173,86 +181,98 @@ root.title("Sensor Sequence Challenge")
 - Main Window: Title set to "Sensor Sequence Challenge".
 
 ```
-sequence_label = tk.Label(root, text="Generated Sequence: ", font=("Arial", 18), fg="blue")
-result_label = tk.Label(root, text="", font=("Arial", 16), fg="green")
+timer_label = tk.Label(...)  
+sequence_label = tk.Label(...)  
+result_label = tk.Label(...)  
 labels_frame = tk.Frame(root)
 ```
-- Sequence Label: Shows generated numbers.
-- Result Label: Shows result after user input.
-- Sensor Labels: Show live status (pressed/not pressed) for each sensor.
+- Timer Label: Shows time remaining for current stage.
+- Sequence Label: Shows instructions and sequence step-by-step.
+- Result Label: Displays success/failure feedback.
+- Sensor Labels: Dynamically update with sensor states ("Pressed"/"Not Pressed").
+
+
 ---
 
 ### 🎮 Game Flow
 ```
-sequence_stages = [4, 8, 12]
+steps_per_stage = [1, 2, 3, 4, 5, 6, 7, 9, 12]
+difficulties = ["Easy", "Medium", "Hard"]
 ```
-- Defines the game rounds with increasing difficulty.
+- Stages: 9 in total, increasing step complexity.
+- Grouped into: 3 difficulty levels × 3 stages each.
   
 ### 🔢 Sequence Generation
 ```
-current_sequence = [random.randint(1, 6) for _ in range(length)]
+full_sequence = [random.randint(1, 6) for _ in range(12)]
 ```
-- Randomly generates a sequence for the current round.
+- A full 12-step random sequence is generated at the start and split across stages.
 
 ### 👁️ Displaying Sequence
 ```
-def show_sequence_step_by_step(seq):
+def show_sequence_step_by_step(seq, length):
     def show_next(index):
-        if index < len(seq):
+        if index < length:
             sequence_label.config(text=f"Sequence Number {index + 1}: {seq[index]}")
             root.after(1000, show_next, index + 1)
         else:
-            sequence_label.config(text="Repeat the sequence using sensors!")
+            sequence_label.config(text=f"Repeat the first {length} steps using sensors!")
             start_sensor_monitoring()
-            start_timer(len(seq))
     show_next(0)
 ```
-- Uses root.after() to show each number every second.
-- Timer starts after the sequence is completely shown.
+- Displays the sequence one number per second using `root.after`.
+- Informs the player when it's time to repeat the steps using sensors.
+- Monitoring only starts after the full display finishes.
 
 ### 🧠 Sensor Monitoring
 ```
 def update_sensor_status():
     if sensor_monitoring_enabled:
         current_time = time.time()
+        sensor_press_count = {k: user_input.count(k) for k in SENSOR_MAP}
+
         for sensor_num, pin in sorted(SENSOR_MAP.items()):
             pin_state = GPIO.input(pin)
             status = "Pressed" if pin_state == GPIO.LOW else "Not Pressed"
             labels[sensor_num].config(text=f"Sensor {sensor_num} (Pin {pin}): {status}")
-            
+
             was_pressed_before = last_pressed.get(pin, True)
             if was_pressed_before and pin_state == GPIO.LOW:
                 last_time = last_press_time.get(pin, 0)
                 if current_time - last_time > DEBOUNCE_DELAY:
-                    user_input.append(sensor_num)
-                    last_press_time[pin] = current_time
-                    if len(user_input) == len(current_sequence):
-                        check_user_sequence()
+                    if sensor_press_count.get(sensor_num, 0) < 2:
+                        user_input.append(sensor_num)
+                        last_press_time[pin] = current_time
+                        if len(user_input) == len(current_sequence):
+                            check_user_sequence()
             last_pressed[pin] = pin_state
+
         root.after(100, update_sensor_status)
+
 ```
-- Polls GPIO every 100ms to check for button presses.
-- Debounce delay prevents duplicate inputs.
-- Tracks valid sensor activations and compares against sequence.
+- Polls GPIO pins every 100ms to detect button presses.
+- Debounce protection: Only accepts inputs spaced by `DEBOUNCE_DELAY = 0.5` seconds.
+- Press limit: Each sensor can only be pressed twice per round.
+- Inputs get appended to `user_input` until it matches expected length.
+
+
 
 ### ✔️ Sequence Validation
 ```
 def check_user_sequence():
     global sensor_monitoring_enabled
     sensor_monitoring_enabled = False
-    if user_input == current_sequence:
+    cancel_round_timer()
+    expected = current_sequence[:len(user_input)]
+    if user_input == expected:
         result_label.config(text="✅ Correct sequence!", fg="green")
         sequence_completed.set()
     else:
-        result_label.config(
-            text=f"❌ Wrong sequence!\nExpected: {current_sequence}\nYou: {user_input}",
-            fg="red"
-        )
-        timer_failed.set()
+        result_label.config(text=f"❌ Wrong sequence!\nExpected: {expected}\nYou: {user_input}", fg="red")
 ```
-- Compares user input with the generated sequence.
-- Displays ✅ if correct, ❌ with expected/actual if wrong.
-- Triggers next round or ends the game.
+- Compares player input to the expected segment of the full sequence.
+- Displays ✅ if correct, ❌ if wrong (with expected vs. actual).
+- Ends stage on validation result.
 
 ### ⏱️ Countdown Timer
 ```
@@ -262,11 +282,11 @@ def start_timer(seq_length):
         nonlocal total_time
         while total_time > 0 and not sequence_completed.is_set():
             mins, secs = divmod(total_time, 60)
-            timer_label.config(text=f"⏳ Time Left: {mins:02d}:{secs:02d}")
+            timer_label.config(text=f" Time Left: {mins:02d}:{secs:02d}")
             time.sleep(1)
             total_time -= 1
         if not sequence_completed.is_set():
-            timer_label.config(text="⏰ Time's up!")
+            timer_label.config(text=" Time's up!")
             timer_failed.set()
 ```
 - The timer starts only after the sequence is shown.
@@ -277,8 +297,33 @@ def start_timer(seq_length):
 ```
 threading.Thread(target=run_sequence_challenge, daemon=True).start()
 ```
-- Runs the sequence game logic in a separate thread.
-- Keeps the GUI responsive during gameplay.
+- Main game loop runs on a background thread.
+- Keeps GUI responsive and prevents freezing during time delays or blocking calls.
+---
+
+### 🧩 Stage Logic
+```
+def play_stage(seq, stage_length):
+    global current_sequence
+    current_sequence = seq[:stage_length]
+    sequence_completed.clear()
+
+    root.after(0, lambda: sequence_label.config(text="Generating sequence..."))
+    root.after(0, lambda: result_label.config(text=""))
+    root.after(0, lambda: [label.config(text=f"Sensor {num} (Pin {pin}): Waiting...") for num, pin in SENSOR_MAP.items()])
+    root.after(0, lambda: labels_frame.pack_forget())
+
+    root.after(1000, lambda: show_sequence_step_by_step(current_sequence, stage_length))
+
+    while not sequence_completed.is_set():
+        time.sleep(0.1)
+
+    return sequence_completed.is_set()
+```
+- Each stage resets labels and displays the assigned sequence portion.
+- Waits for user to complete input or timeout.
+- Returns whether the user passed the stage.
+---
 
 ### 🚦 GUI Main Loop & Cleanup
 ```
@@ -287,16 +332,16 @@ try:
 finally:
     GPIO.cleanup()
 ```
-- Starts the GUI event loop.
-- Cleans up GPIO on program exit (even with Ctrl+C).
+- Main GUI loop keeps the window running.
+- On exit (even via Ctrl+C), GPIO pins are reset properly to avoid hangups or damage.
 ---
 
 ### ✋ Graceful Exit
-python
 ```
 finally:
     GPIO.cleanup()
 ```
-- Ensures the GPIO pins are properly reset when the program ends.
+- Ensures all GPIO pins are released properly.
+- Required for hardware stability and avoiding pin lockups after crash or forced quit.
 
 
