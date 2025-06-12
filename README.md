@@ -25,15 +25,32 @@ Players will:
 -  1x Raspberry Pi 4 Model B  
 -  6x AoKu AK-399 Car Seat Pressure Sensors  
 -  6x WAGO Connectors  
--  13x Jumper Wires
--  2x LAN Cables
+-  2x LAN cables
 -  6x Carboard Button
 -  1x Rasp Pi display V1
+-  1x Display holder
 
 ### 💻 Software
 -  Random Number Generator  
 -  Sensor Signal Detector
 ---
+
+
+## Physical connections and Props
+
+Cabling
+- 2x LAN cable
+
+Since there are six sensors I needed twelve wires in total. I didn't want to use jumper wires as there would be too many points of failure over a long cable. I decided to use LAN cables by isolating two wires per sensor. Since a LAN cable only has four pairs and I needed six, I used two LAN cables.
+
+Props
+- Buttons
+- Screen holder
+- Prop Materials: Cardboard Glue 
+
+We are using cardboard to make everything. For the buttons, we layered three pieces of cardboard and carved a shape into the top two layers to create a 3D effect. For the screen holder, I used glue and cardboard to make an angled piece of cardboard with a hole for the screen. 
+
+
 
 ## 🧭 System Diagram
 ![System Diagram](AssetsFolder/SystemDiagram_Updated.png)
