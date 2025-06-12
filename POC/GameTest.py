@@ -27,13 +27,6 @@ sequence_label.pack(pady=20)
 result_label = tk.Label(root, text="", font=("Arial", 16), fg="green")
 result_label.pack(pady=10)
 
-labels_frame = tk.Frame(root)
-labels = {}
-for sensor_num, pin in sorted(SENSOR_MAP.items()):
-    label = tk.Label(labels_frame, text=f"Sensor {sensor_num} (Pin {pin}): Waiting...", font=("Arial", 14))
-    label.pack(anchor="w", padx=10, pady=2)
-    labels[sensor_num] = label
-
 # Game State
 current_sequence = []
 user_input = []
@@ -132,7 +125,7 @@ def check_user_sequence():
         result_label.config(text="✅ Correct sequence!", fg="green")
         sequence_completed.set()
     else:
-        result_label.config(text=f"❌ Wrong sequence!\nExpected: {expected}\nYou: {user_input}", fg="red")
+        result_label.config(text=f"Wrong sequence!\nExpected: {expected}\nYou: {user_input}", fg="red")
 
 def play_stage(seq, stage_length):
     global current_sequence
