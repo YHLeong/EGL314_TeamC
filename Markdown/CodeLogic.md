@@ -123,3 +123,19 @@ To show that a functioning randomiser has been incorporated, and basic game logi
 
 - When the GUI is closed, the `finally` stops `root.mainloop()`and ensures that all GPIO pins are reseted properly with `GPIO.cleanup()`, preventing possible conflicts when rerunning the code
 
+# Update of code from randomiser.py
+
+## Addition of a raspberry pi 3 7" touchscreen
+
+- when the game launches, the tkinter Gui is launched in fullscreen mode `root.attributes ("-fullscreen", True)`
+
+- when esc is pressed,  a event is activated, and fullscreen mode is exited `root.bind("<Escape>", lambda event: root.attributes("-fullscreen", False))`
+
+## New game variables
+- tracking of current sequence number
+
+- tracking of amount of errors
+
+- tracking of numbers of restarts and limiting the number of restarts to 3. When number of restarts hits 0, game ends.
+
+- limiting the total time for a stage to 20 seconds. When the 20 seconds ends, considered as one error. 
