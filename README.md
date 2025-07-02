@@ -360,5 +360,26 @@ finally:
 ```
 - Ensures all GPIO pins are released properly.
 - Required for hardware stability and avoiding pin lockups after crash or forced quit.
+- ---
 
+## MVP
+###
+| Marker No. | REAPER Action      | Action ID |
+|:----------:|:------------------:|:---------:|
+| Marker 1   | Jump to Marker 01  | 40161     |
+| Marker 2   | Jump to Marker 02  | 40162     |
+| Marker 3   | Jump to Marker 03  | 40163     |
+| Marker 4   | Jump to Marker 04  | 40164     |
+| Marker 5   | Jump to Marker 05  | 40165     |
+| Marker 6   | Jump to Marker 06  | 40166     |
+| Marker 7   | Jump to Marker 07  | 40167     |
+| Marker 8   | Jump to Marker 08  | 40168     |
+| Marker 9   | Jump to Marker 09  | 40169     |
+| Marker 10  | Jump to Marker 10  | 40170     |
+| Marker 11  | Jump to Marker 11  | 40171     |
+| Marker 12  | Jump to Marker 12  | 40172     |
+| Marker 13  | Jump to Marker 13  | 40173     |
+| Marker 14  | Jump to Marker 14  | 40174     |
+| Marker 15  | Jump to Marker 15  | 40175     |
+| Marker 16  | Jump to Marker 16  | 40176     |
 
