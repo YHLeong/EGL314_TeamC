@@ -1,0 +1,137 @@
+import RPi.GPIO as GPIO
+import tkinter as tk
+import time
+import random
+
+# GPIO SETUP
+SENSOR_MAP = {1: 7, 2: 6, 3: 19, 4: 16, 5: 20, 6: 21}
+SENSOR_PINS = list(SENSOR_MAP.values())
+
+GPIO.setmode(GPIO.BCM)
+for pin in SENSOR_PINS:
+    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+# Tkinter SETUP
+root = tk.Tk()
+root.title("Sensor Replication Game")
+root.attributes("-fullscreen", True)
+root.bind("<Escape>", lambda event: root.attributes("-fullscreen", False))
+
+status_label = tk.Label(root, text="Press the correct sequence!", font=("Arial", 32, "bold"))
+status_label.pack(pady=30)
+
+time_label = tk.Label(root, text="", font=("Arial", 28, "bold"))
+time_label.pack(pady=20)
+
+sensor_label = tk.Label(root, text="Waiting...", font=("Arial", 36, "bold"))
+sensor_label.pack(pady=30)
+
+# GLOBAL GAME VARIABLES
+current_sequence = []
+error_count = 0
+restarts = 0
+MAX_RESTARTS = 3
+
+TOTAL_STAGE_TIME = 20
+stage_start_time = None
+
+DEBOUNCE_DELAY = 0.2  # 200 milliseconds debounce delay
+last_press_time = {}
+
+def update_time():
+    remaining_time = int(TOTAL_STAGE_TIME - (time.time() - stage_start_time))
+    time_label.config(text=f"Time Left: {remaining_time} sec")
+    if remaining_time > 0:
+        root.after(1000, update_time)
+    else:
+        game_over()
+
+def wait_for_all_buttons():
+    sensor_label.config(text="Press ALL sensors to start")
+    if all(GPIO.input(pin) == GPIO.LOW for pin in SENSOR_PINS):
+        sensor_label.config(text="Game starting...")
+        root.after(2000, start_game)
+    else:
+        root.after(100, wait_for_all_buttons)
+
+def start_game():
+    global stage_start_time
+    sensor_label.config(text="Stage 1 Starting...")
+    root.update()
+    time.sleep(2)
+    stage_start_time = time.time()
+    update_time()
+    next_step()
+
+def next_step():
+    global error_count
+    if error_count >= MAX_RESTARTS:
+        game_over()
+        return
+
+    if len(current_sequence) >= 4:
+        end_stage()
+        return
+
+    new_sensor = random.choice(list(SENSOR_MAP.keys()))
+    current_sequence.append(new_sensor)
+
+    sequence_str = " -> ".join(str(num) for num in current_sequence)
+    sensor_label.config(text=f"Press: {sequence_str}")
+
+    wait_for_sequence()
+
+def wait_for_sequence():
+    pressed_buttons = []
+
+    def check_press():
+        global error_count, restarts
+
+        for sensor_num, pin in SENSOR_MAP.items():
+            current_time = time.time()
+
+            if GPIO.input(pin) == GPIO.LOW:
+                # Debounce logic: Ignore duplicate presses within debounce delay
+                if sensor_num in last_press_time and (current_time - last_press_time[sensor_num]) < DEBOUNCE_DELAY:
+                    continue
+                
+                last_press_time[sensor_num] = current_time
+                pressed_buttons.append(sensor_num)
+
+        if len(pressed_buttons) == len(current_sequence):
+            if pressed_buttons == current_sequence:
+                next_step()
+            else:
+                error_count += 1
+                if error_count >= MAX_RESTARTS:
+                    game_over()
+                    return
+                restarts += 1
+                if restarts >= MAX_RESTARTS:
+                    game_over()
+                    return
+                sensor_label.config(text="Wrong! Restarting...")
+                root.after(2000, start_game)
+        else:
+            root.after(100, check_press)
+
+    root.after(100, check_press)
+
+def end_stage():
+    sensor_label.config(text="Stage 1 Completed!")
+    root.update()
+    root.after(3000, root.destroy)
+
+def game_over():
+    sensor_label.config(text="Game Over! You Lose.")
+    root.update()
+    root.after(3000, root.destroy)
+
+# START GAME FLOW
+restarts = 0
+wait_for_all_buttons()
+
+try:
+    root.mainloop()
+finally:
+    GPIO.cleanup()
