@@ -16,7 +16,9 @@ def send_message(receiver_ip, receiver_port, address, message):
 PI_A_ADDR = "192.168.254.60"	# wlan ip
 PORT = 6800
 
-addr = "/action/40161" # Jump to Marker One
+addr = "/action/40170" # Jump to Marker One
+addr1 = "/action/40044" # Play/Stop toggle
 msg = float(1) # Trigger TRUE Value
 
 send_message(PI_A_ADDR, PORT, addr, msg)
+send_message(PI_A_ADDR, PORT, addr1, msg)
