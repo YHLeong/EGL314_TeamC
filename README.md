@@ -139,7 +139,7 @@ except KeyboardInterrupt:
 ## Connection []()
 
 
-## Prove Of Concept
+## Prove Of Concept - [Click Here]()insert link here
 ### 🧾 Overview
 
 This Python script implements a **progressive memory game** using a **Raspberry Pi** and **Tkinter GUI**. Players must memorize and replicate sequences shown on screen by pressing corresponding physical buttons connected via **GPIO pins**. The game consists of **multiple stages** with increasing sequence lengths, categorized into **Easy, Medium, and Hard** difficulty levels.
@@ -364,22 +364,22 @@ finally:
 
 ## MVP
 ###
-| Marker No. | REAPER Action      | Action ID |
-|:----------:|:------------------:|:---------:|
-| Marker 1   | Jump to Marker 01  | 40161     |
-| Marker 2   | Jump to Marker 02  | 40162     |
-| Marker 3   | Jump to Marker 03  | 40163     |
-| Marker 4   | Jump to Marker 04  | 40164     |
-| Marker 5   | Jump to Marker 05  | 40165     |
-| Marker 6   | Jump to Marker 06  | 40166     |
-| Marker 7   | Jump to Marker 07  | 40167     |
-| Marker 8   | Jump to Marker 08  | 40168     |
-| Marker 9   | Jump to Marker 09  | 40169     |
-| Marker 10  | Jump to Marker 10  | 40170     |
-| Marker 11  | Jump to Marker 11  | 40171     |
-| Marker 12  | Jump to Marker 12  | 40172     |
-| Marker 13  | Jump to Marker 13  | 40173     |
-| Marker 14  | Jump to Marker 14  | 40174     |
-| Marker 15  | Jump to Marker 15  | 40175     |
-| Marker 16  | Jump to Marker 16  | 40176     |
+| Marker | REAPER Action   | Command ID   |
+|:------:|:---------------:|:------------:|
+| 21     | Load sound 1     | 41261        |
+| 22     | Load sound 2     | 41262        |
+| 23     | Load sound 3     | 41263        |
+| 24     | Load sound 4     | 41264        |
+| 25     | Load sound 5     | 41265        |
+| 26     | Load sound 6     | 41266        |
+| 27     | Level 1 start    | 41267        |
+| 28     | Level 2 start    | 41268        |
+| 29     | Level 3 start    | 41269        |
+| 30     | Win stage        | 41270        |
+| 31     | Lose stage       | /marker/18   |
+| 32     | Win game         | /marker/19   |
+| 33     | Lose game        | /marker/20   |
+
+
+
 
