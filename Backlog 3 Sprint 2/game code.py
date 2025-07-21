@@ -89,9 +89,12 @@ def get_stage_color(level):
     }.get(level, Color(255, 255, 255))
 
 def trigger_reaper(id):
-    reaper.send_message("/action/40044", 1.0)
-    reaper.send_message(f"/action/{id}", 1.0)
-    reaper.send_message("/action/40045", 1.0)
+    global level
+    stage_time = times.get(level, 30)  # Get the time limit for current level
+    reaper.send_message(f"/action/{id}", 1.0)  # Jump to marker
+    reaper.send_message("/action/1007", 1.0)   # Play
+    # Schedule stop after stage time limit without blocking
+    threading.Timer(stage_time, lambda: reaper.send_message("/action/1016", 1.0)).start()
 
 def trigger_osc(n):
     cues = milestones.get(level, [])
