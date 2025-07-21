@@ -91,7 +91,13 @@ def get_stage_color(level):
 def trigger_reaper(id):
     global level
     stage_time = times.get(level, 30)  # Get the time limit for current level
-    reaper.send_message(f"/action/{id}", 1.0)  # Jump to marker
+    
+    # Check if id is a full OSC address (starts with "/") or just an action number
+    if id.startswith("/"):
+        reaper.send_message(id, 1.0)  # Send full OSC address directly
+    else:
+        reaper.send_message(f"/action/{id}", 1.0)  # Jump to marker using action number
+    
     reaper.send_message("/action/1007", 1.0)   # Play
     # Schedule stop after stage time limit without blocking
     threading.Timer(stage_time, lambda: reaper.send_message("/action/1016", 1.0)).start()
@@ -183,7 +189,7 @@ def print_args(addr, *args):
         if level == MAX_LEVEL:
             gma.send_message("/gma3/cmd", "Go+ sequence 23")
             gma.send_message("/gma3/cmd", "Go sequence 33")
-            reaper.send_message("/marker/19", 1.0)
+            trigger_reaper("/marker/19", 1.0)
             light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
             light_up(LED_COUNT, 0)
             ui.update("game", "Game: Win", "green")
@@ -215,13 +221,13 @@ def start_game_logic():
                     ui.update("tries", f"Tries Left: {max(0, 3 - tries)}")
                     red_dim(int(LED_COUNT * (count / goals[level])))
                     gma.send_message("/gma3/cmd", "Lose Stage")
-                    reaper.send_message("/marker/18", 1.0)
+                    trigger_reaper("/marker/18", 1.0)
                     shutdown_sequences()
                     ui.update("result", "Stage: Fail", "red")
 
                     if tries >= 3:
                         gma.send_message("/gma3/cmd", "Go+ sequence 32")
-                        reaper.send_message("/marker/20", 1.0)
+                        trigger_reaper("/marker/20", 1.0)
                         ui.update("game", "Game: Lose", "red")
                         started = False
                         timing = False
