@@ -139,7 +139,7 @@ class GameUI:
         gma.send_message("/gma3/cmd", "Go+ Sequence 41")
         time.sleep(0.9)
         gma.send_message("/gma3/cmd", "On Sequence 207")
-        trigger_reaper("41100")
+        trigger_reaper("/marker/21", 1.0) 
         ready = True
         self.update("game", "Ready", "blue")
 
