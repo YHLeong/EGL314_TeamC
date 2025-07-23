@@ -2,19 +2,18 @@
 
 ## 🎯 Introduction
 
-**Wall Glyphs: Silent Sequence** is an immersive, non-verbal multiplayer game designed for **3 to 4 players**. The objective? Collaborate **without speaking or using visual cues** to activate six glyphs on a wall in the correct order. 🤐✨
+**Wall Glyphs: Silent Sequence** is an immersive, non-verbal multiplayer game designed for **3 to 6 players**. The objective? **Charge up the batteries** needed to power on the Spaceship to get home. ⚡✨
 
-Players must rely solely on intuition and audio cues to work together and solve the sequence challenge!
+Players must work together and charge up the batteries as fast as possible!
 
 ---
 
 ## 🕹️ Objective
 
 Players will:
-- Observe a light-based demo of the correct glyph sequence 🔆
-- Receive a **spatial audio signal** 🎧 to begin
-- Step on **pressure-sensitive stones** 🪨 in the correct order
-- Complete the sequence within a **set time limit** ⏱️
+- step **repeatedly** on the car seat sensors for a **x** amount of time 🦵🏼
+- Battery will get **charged up** by stepping on the car seat sensor 🔋
+- Complete the sequence within a **set time limit** to advance⏱️
 
 
 ---
