@@ -110,7 +110,7 @@ def trigger_osc(n):
     elif n == cues[3]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 4"); trigger_reaper("41264"); trigger_reaper("41270")
 
 class GameUI:
-    def _init_(self):
+    def __init__(self):
         self.root = tk.Tk()
         self.root.attributes("-fullscreen", True)
         self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
@@ -240,7 +240,7 @@ def start_game_logic():
         light_up(LED_COUNT, 0)
         server.shutdown()
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     ui = GameUI()
     threading.Thread(target=start_game_logic, daemon=True).start()
     ui.root.mainloop()
