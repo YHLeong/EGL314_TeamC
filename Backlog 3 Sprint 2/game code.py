@@ -143,6 +143,24 @@ class GameUI:
         ready = True
         self.update("game", "Ready", "blue")
 
+
+    def off_sequence(self, e=None):
+            global ready
+            self.update("game", "Shutting Down", "red")
+            gma.send_message("/gma3/cmd", "Go Sequence 36 cue 1")
+            time.sleep(0.3)
+            gma.send_message("/gma3/cmd", "Go Sequence 23 cue 7")
+            time.sleep(0.5)
+            gma.send_message("/gma3/cmd", "Off Sequence 41")
+            time.sleep(0.5)
+            gma.send_message("/gma3/cmd", "Off Sequence 38")
+            time.sleep(0.5)
+            gma.send_message("/gma3/cmd", "On Sequence 207")
+            ready = True
+            self.update("game", "Off", "gray")
+ 
+
+
 def print_args(addr, *args):
     global count, started, timing, start_time, timeout, level, tries, waiting
 
