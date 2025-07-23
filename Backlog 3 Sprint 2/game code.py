@@ -4,14 +4,15 @@ import tkinter as tk
 from rpi_ws281x import *
 from pythonosc import udp_client, dispatcher, osc_server
 
-# OSC Setup
+# OSC addresses
 GMA_IP, GMA_PORT       = "192.168.254.213", 2000
 REAPER_IP, REAPER_PORT = "192.168.254.12", 8000
 LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001
 
-gma     = udp_client.SimpleUDPClient(GMA_IP, GMA_PORT)
-reaper  = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+gma_client    = udp_client.SimpleUDPClient(GMA_IP, GMA_PORT)
+reaper_client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
 
+# NeoPixel setup
 LED_COUNT = 300
 strip = Adafruit_NeoPixel(LED_COUNT, 18, 800000, 10, False, 128)
 strip.begin()
@@ -21,8 +22,8 @@ def light_up(n, color):
         strip.setPixelColor(i, color)
     strip.show()
 
-def red_dim(n):
-    for i in range(n - 1, -1, -1):
+def red_dim_down(n):
+    for i in range(n-1, -1, -1):
         strip.setPixelColor(i, Color(255, 0, 0))
         strip.show()
         time.sleep(0.005)
@@ -31,10 +32,10 @@ def red_dim(n):
     for _ in range(5):
         light_up(n, Color(255, 0, 0)); time.sleep(0.3)
         light_up(n, 0); time.sleep(0.3)
-    light_up(n, 0)
+    light_up(LED_COUNT, 0)
 
-def green_dim(n):
-    for i in range(n - 1, -1, -1):
+def green_dim_down(n):
+    for i in range(n-1, -1, -1):
         strip.setPixelColor(i, Color(0, 255, 0))
         strip.show()
         time.sleep(0.005)
@@ -47,39 +48,6 @@ def flash_bpm(n, bpm=120, duration=5):
         light_up(n, Color(0, 255, 0)); time.sleep(delay)
         light_up(n, 0); time.sleep(delay)
 
-def level_start_sequence(level):
-    blink = {1: 0.3, 2: 0.2, 3: 0.15, 4: 0.1}.get(level, 0.25)
-    for _ in range(6):
-        light_up(LED_COUNT, Color(0, 0, 255)); time.sleep(blink)
-        light_up(LED_COUNT, 0); time.sleep(blink)
-    light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
-    light_up(LED_COUNT, 0)
-
-def shutdown_sequences():
-    for cue in ["23 cue 1", "23 cue 2", "23 cue 3", "23 cue 4"]:
-        gma.send_message("/gma3/cmd", f"Off Sequence {cue}")
-    reaper.send_message("/action/40042", 1.0)
-
-count         = 0
-tries         = 0
-started       = False
-timing        = False
-timeout       = False
-ready         = False
-waiting       = False
-start_time    = None
-level         = 1
-MAX_LEVEL     = 4
-
-goals = {1: 40, 2: 80, 3: 120, 4: 240}
-times = {1: 30, 2: 40, 3: 50, 4: 60}
-milestones = {
-    1: [10, 20, 30, 40],
-    2: [20, 40, 60, 80],
-    3: [30, 60, 90, 120],
-    4: [60, 120, 180, 240]
-}
-
 def get_stage_color(level):
     return {
         1: Color(255, 0, 0),
@@ -88,176 +56,211 @@ def get_stage_color(level):
         4: Color(0, 255, 0)
     }.get(level, Color(255, 255, 255))
 
-def trigger_reaper(id):
-    global level
-    stage_time = times.get(level, 30)  # Get the time limit for current level
-    
-    # Check if id is a full OSC address (starts with "/") or just an action number
-    if id.startswith("/"):
-        reaper.send_message(id, 1.0)  # Send full OSC address directly
-    else:
-        reaper.send_message(f"/action/{id}", 1.0)  # Jump to marker using action number
-    
-    reaper.send_message("/action/1007", 1.0)   # Play
-    # Schedule stop after stage time limit without blocking
-    threading.Timer(stage_time, lambda: reaper.send_message("/action/1016", 1.0)).start()
+def level_start_sequence(level):
+    if level == 1:
+        for _ in range(6):
+            light_up(LED_COUNT, Color(0, 0, 255)); time.sleep(0.25)
+            light_up(LED_COUNT, 0); time.sleep(0.25)
+        light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
+        light_up(LED_COUNT, 0)
+    elif level == 2:
+        for _ in range(5):
+            light_up(LED_COUNT, Color(255, 140, 0)); time.sleep(0.1)
+            light_up(LED_COUNT, 0); time.sleep(0.1)
+        light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
+        light_up(LED_COUNT, 0)
+    elif level == 3:
+        for _ in range(3):
+            light_up(LED_COUNT, Color(255, 255, 0)); time.sleep(0.3)
+            light_up(LED_COUNT, 0); time.sleep(0.3)
+        light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
+        light_up(LED_COUNT, 0)
+    elif level == 4:
+        for i in range(6):
+            strip.setPixelColor(i * 50, Color(0, 255, 0)); strip.show(); time.sleep(0.1)
+        light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
+        light_up(LED_COUNT, 0)
 
-def trigger_osc(n):
-    cues = milestones.get(level, [])
-    if n == cues[0]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 1"); trigger_reaper("41261")
-    elif n == cues[1]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 2"); trigger_reaper("41262")
-    elif n == cues[2]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 3"); trigger_reaper("41263")
-    elif n == cues[3]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 4"); trigger_reaper("41264"); trigger_reaper("41270")
+def shutdown_sequences(level):
+    cues = ["23 cue 1", "23 cue 2", "23 cue 3", "23 cue 4"]
+    for cue in cues:
+        gma_client.send_message("/gma3/cmd", f"Off Sequence {cue}")
+    reaper_client.send_message("/action/40042", 1.0)  # Stop
+
+# Game state
+count = 0
+stage_tries = 0
+game_started = False
+timing_started = False
+timeout_triggered = False
+startup_complete = False
+waiting_for_next = False
+start_time = None
+current_level = 1
+max_levels = 4
+
+milestones = {
+    1: [10, 20, 30, 40],
+    2: [20, 40, 60, 80],
+    3: [30, 60, 90, 120],
+    4: [60, 120, 180, 240]
+}
+level_goals = {1: 40, 2: 80, 3: 120, 4: 240}
+level_times = {1: 30, 2: 40, 3: 50, 4: 60}
+
+def get_level_time(level): return level_times.get(level, 30)
+
+def trigger_reaper(action_id):
+    reaper_client.send_message("/action/40044", 1.0)
+    reaper_client.send_message(f"/action/{action_id}", 1.0)
+    reaper_client.send_message("/action/40045", 1.0)
+
+def trigger_osc(count):
+    if current_level in milestones:
+        if count == milestones[current_level][0]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 1"); trigger_reaper("41261")
+        elif count == milestones[current_level][1]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 2"); trigger_reaper("41262")
+        elif count == milestones[current_level][2]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 3"); trigger_reaper("41263")
+        elif count == milestones[current_level][3]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 4"); trigger_reaper("41264"); trigger_reaper("41270")
 
 class GameUI:
     def __init__(self):
         self.root = tk.Tk()
+        self.root.title("AV Game Status")
+        self.root.geometry("300x220")
         self.root.attributes("-fullscreen", True)
         self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
-        self.root.bind("<space>", self.start_sequence)
+        self.root.bind("<space>", self.trigger_startup_sequence)
 
-        font = ("Arial", 28)
-        self.labels = {
-            "level":  tk.Label(self.root, text="Level: 1", font=font),
-            "time":   tk.Label(self.root, text="Time: 0", font=font),
-            "result": tk.Label(self.root, text="Stage: In Progress", font=font, fg="blue"),
-            "game":   tk.Label(self.root, text="Game: Waiting", font=font, fg="gray"),
-            "tries":  tk.Label(self.root, text="Tries Left: 3", font=font)
-        }
-        for lbl in self.labels.values(): lbl.pack(pady=10)
+        font_large = ("Arial", 28)
+        self.level_label = tk.Label(self.root, text="Level: 1", font=font_large); self.level_label.pack(pady=10)
+        self.time_label = tk.Label(self.root, text="Remaining Time: 30s", font=font_large); self.time_label.pack(pady=10)
+        self.stage_result = tk.Label(self.root, text="Stage: In Progress", font=font_large, fg="blue"); self.stage_result.pack(pady=10)
+        self.game_result = tk.Label(self.root, text="Game: Waiting", font=font_large, fg="gray"); self.game_result.pack(pady=10)
+        self.tries_label = tk.Label(self.root, text="Tries Left: 3", font=font_large); self.tries_label.pack(pady=10)
 
-    def update(self, key, value, color=None):
-        if key in self.labels:
-            self.labels[key].config(text=value)
-            if color: self.labels[key].config(fg=color)
+    def update_level(self, level): self.root.after(0, lambda: self.level_label.config(text=f"Level: {level}"))
+    def update_time(self, time_left): self.root.after(0, lambda: self.time_label.config(text=f"Remaining Time: {int(time_left)}s"))
+    def update_tries(self, tries): self.root.after(0, lambda: self.tries_label.config(text=f"Tries Left: {tries}"))
+    def show_stage_result(self, result): color = "green" if result == "Win" else "red"; self.root.after(0, lambda: self.stage_result.config(text=f"Stage: {result}", fg=color))
+    def show_game_result(self, result): color = {"Win": "green", "Lose": "red", "Startup": "orange", "Ready": "blue", "Waiting": "gray"}.get(result, "gray"); self.root.after(0, lambda: self.game_result.config(text=f"Game: {result}", fg=color))
 
-    def start_sequence(self, e=None):
-        global ready
-        self.update("game", "Startup", "orange")
-        gma.send_message("/gma3/cmd", "Go Sequence 38 cue 3")
+    def trigger_startup_sequence(self, event=None):
+        global startup_complete
+        self.show_game_result("Startup")
+        gma_client.send_message("/gma3/cmd", "Go Sequence 38 cue 3")
         time.sleep(0.3)
-        gma.send_message("/gma3/cmd", "Go+ Sequence 41")
+        gma_client.send_message("/gma3/cmd", "Go+ Sequence 41")
         time.sleep(0.9)
-        gma.send_message("/gma3/cmd", "On Sequence 207")
-        trigger_reaper("/marker/21", 1.0) 
-        ready = True
-        self.update("game", "Ready", "blue")
-
-
-    def off_sequence(self, e=None):
-            global ready
-            self.update("game", "Shutting Down", "red")
-            gma.send_message("/gma3/cmd", "Go Sequence 36 cue 1")
-            time.sleep(0.3)
-            gma.send_message("/gma3/cmd", "Go Sequence 23 cue 7")
-            time.sleep(0.5)
-            gma.send_message("/gma3/cmd", "Off Sequence 41")
-            time.sleep(0.5)
-            gma.send_message("/gma3/cmd", "Off Sequence 38")
-            time.sleep(0.5)
-            gma.send_message("/gma3/cmd", "On Sequence 207")
-            ready = True
-            self.update("game", "Off", "gray")
- 
-
+        gma_client.send_message("/gma3/cmd", "On Sequence 207")
+        trigger_reaper("/marker/21")
+        startup_complete = True
+        self.show_game_result("Ready")
 
 def print_args(addr, *args):
-    global count, started, timing, start_time, timeout, level, tries, waiting
+    global count, game_started, timing_started, start_time
+    global timeout_triggered, current_level, stage_tries, waiting_for_next
 
-    if not ready: return
-
-    if waiting:
-        level_start_sequence(level)
-        gma.send_message("/gma3/cmd", f"Level {level} Start")
-        ui.update("level", f"Level: {level}")
-        ui.update("tries", "Tries Left: 3")
-        count = 0; tries = 0; timing = False; timeout = False
-        start_time = None; waiting = False
+    if not startup_complete:
         return
 
-    if not started:
-        started = True
-        level_start_sequence(level)
-        gma.send_message("/gma3/cmd", "Level Start")
-        ui.update("level", f"Level: {level}")
-        ui.update("tries", "Tries Left: 3")
+    if waiting_for_next:
+        level_start_sequence(current_level)
+        gma_client.send_message("/gma3/cmd", f"Level {current_level} Start")
+        ui.update_level(current_level)
+        ui.update_tries(3)
+        count = 0
+        timing_started = False
+        timeout_triggered = False
+        stage_tries = 0
+        waiting_for_next = False
         return
 
-    if not timing:
+    if not game_started:
+        game_started = True
+        level_start_sequence(current_level)
+        gma_client.send_message("/gma3/cmd", "Level Start")
+        ui.update_level(current_level)
+        ui.update_tries(3)
+        return
+
+    if not timing_started:
         start_time = time.time()
-        timing = True
+        timing_started = True
         return
 
-    if timeout: return
+    if timeout_triggered or not timing_started:
+        return
 
     count += 1
-    if count in milestones.get(level, []):
-        progress = int(LED_COUNT * (count / goals[level]))
-        light_up(progress, get_stage_color(level))
+    if count in milestones.get(current_level, []):
+        lit_pixels = int(LED_COUNT * (count / level_goals[current_level]))
+        light_up(lit_pixels, get_stage_color(current_level))
         trigger_osc(count)
 
-    if count == goals[level]:
+    if count == level_goals[current_level]:
         flash_bpm(LED_COUNT)
-        green_dim(LED_COUNT)
-        gma.send_message("/gma3/cmd", "Win Stage")
+        green_dim_down(LED_COUNT)
+        gma_client.send_message("/gma3/cmd", "Win Stage")
         trigger_reaper("41270")
-        shutdown_sequences()
-        ui.update("result", "Stage: Win", "green")
+        shutdown_sequences(current_level)
+        ui.show_stage_result("Win")
 
-        if level == MAX_LEVEL:
-            gma.send_message("/gma3/cmd", "Go+ sequence 23")
-            gma.send_message("/gma3/cmd", "Go sequence 33")
-            trigger_reaper("/marker/19", 1.0)
-            light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
-            light_up(LED_COUNT, 0)
-            ui.update("game", "Game: Win", "green")
-            started = False; timing = False
+        if current_level == max_levels:
+            gma_client.send_message("/gma3/cmd", "Go+ sequence 23")
+            gma_client.send_message("/gma3/cmd", "Go sequence 33")
+            reaper_client.send_message("/marker/19")
+            ui.show_game_result("Win")
+            game_started = False
+            timing_started = False
             return
 
-        level += 1
-        waiting = True
+        current_level += 1
+        waiting_for_next = True
+        ui.show_stage_result("In Progress")
+        ui.update_level(current_level)
         return
 
 def start_game_logic():
-    global timing, timeout, start_time, level, tries, started, count
+    global timing_started, timeout_triggered, start_time, current_level
+    global stage_tries, game_started, count
     osc_dispatcher = dispatcher.Dispatcher()
     osc_dispatcher.map("/print", print_args)
-    server = osc_server.ThreadingOSCUDPServer((LOCAL_IP, LOCAL_PORT), osc_dispatcher)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    osc_server_thread = osc_server.ThreadingOSCUDPServer((LOCAL_IP, LOCAL_PORT), osc_dispatcher)
+    threading.Thread(target=osc_server_thread.serve_forever, daemon=True).start()
     print(f"OSC server listening on {LOCAL_IP}:{LOCAL_PORT}")
 
     try:
         while True:
-            if timing and not timeout:
-                elapsed = time.time() - start_time
-                remaining = times.get(level, 30) - elapsed
-                ui.update("time", f"Time: {max(0, int(remaining))}")
+            if timing_started and not timeout_triggered:
+                time_left = get_level_time(current_level) - (time.time() - start_time)
+                ui.update_time(max(0, time_left))
 
-                if elapsed > times[level] and count < goals[level]:
-                    timeout = True
-                    tries += 1
-                    ui.update("tries", f"Tries Left: {max(0, 3 - tries)}")
-                    red_dim(int(LED_COUNT * (count / goals[level])))
-                    gma.send_message("/gma3/cmd", "Lose Stage")
-                    trigger_reaper("/marker/18", 1.0)
-                    shutdown_sequences()
-                    ui.update("result", "Stage: Fail", "red")
+                if time.time() - start_time > get_level_time(current_level) and count < level_goals[current_level]:
+                    timeout_triggered = True
+                    stage_tries += 1
+                    ui.update_tries(3 - stage_tries)
+                    red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
+                    gma_client.send_message("/gma3/cmd", "Lose Stage")
+                    reaper_client.send_message("/marker/18")
+                    shutdown_sequences(current_level)
+                    ui.show_stage_result("Lose")
 
-                    if tries >= 3:
-                        gma.send_message("/gma3/cmd", "Go+ sequence 32")
-                        trigger_reaper("/marker/20", 1.0)
-                        ui.update("game", "Game: Lose", "red")
-                        started = False
-                        timing = False
+                    if stage_tries >= 3:
+                        gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
+                        reaper_client.send_message("/marker/20")
+                        ui.show_game_result("Lose")
+                        game_started = False
+                        timing_started = False
                     else:
                         count = 0
-                        timing = False
-                        timeout = False
+                        timing_started = False
+                        timeout_triggered = False
             time.sleep(0.01)
     except KeyboardInterrupt:
         light_up(LED_COUNT, 0)
-        server.shutdown()
+        osc_server_thread.shutdown()
 
+# 🚀 Start the GUI and game logic
 if __name__ == "__main__":
     ui = GameUI()
     threading.Thread(target=start_game_logic, daemon=True).start()
