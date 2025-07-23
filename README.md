@@ -362,6 +362,7 @@ finally:
 - Required for hardware stability and avoiding pin lockups after crash or forced quit.
 ---
 
+<<<<<<< HEAD
 ## MVP Stage - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%203%20Sprint%202/game%20code.py)
 ### 🧾 Overview
 
@@ -618,6 +619,10 @@ ui.root.mainloop()
 ---
 
 ## REAPER Marker Configuration
+=======
+## MVP
+### Audio
+>>>>>>> 64967411b11d4eaa190476405b75913961ab7079
 | Marker | REAPER Action   | Command ID   |
 |:------:|:---------------:|:------------:|
 | 21     | Load sound 1     | 41261        |
@@ -633,6 +638,15 @@ ui.root.mainloop()
 | 31     | Lose stage       | /marker/18   |
 | 32     | Win game         | /marker/19   |
 | 33     | Lose game        | /marker/20   |
+
+### Lighting
+| Sequence/Cue|     Action    | 
+|:-----------:|:-------------:|
+| 23          |   Charging    |
+| 32          |   Game Lose   |
+| 33          |   Game Win    |
+| 38          |   Game Play   |
+| 41          |   During Game | 
 
 
 
