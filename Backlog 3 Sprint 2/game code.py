@@ -65,7 +65,7 @@ def level_start_sequence(level):
         light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
         light_up(LED_COUNT, 0)
     elif level == 2:
-        trigger_reaper_with_level_delay(addr6, 2)  # Level 2 start with 40s delay (same as Level 1)
+        trigger_reaper_with_level_delay(addr6, 2)  # Level 2 start with 40s delay
         for _ in range(5):
             light_up(LED_COUNT, Color(255, 140, 0)); time.sleep(0.1)
             light_up(LED_COUNT, 0); time.sleep(0.1)
@@ -79,7 +79,7 @@ def level_start_sequence(level):
         light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
         light_up(LED_COUNT, 0)
     elif level == 4:
-        trigger_reaper_with_level_delay(addr8, 4)  # Level 4 start with 60s delay
+        trigger_reaper_with_level_delay(addr8, 4)  # Level 3 start with 60s delay
         for i in range(6):
             strip.setPixelColor(i * 50, Color(0, 255, 0)); strip.show(); time.sleep(0.1)
         light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
@@ -148,11 +148,11 @@ addr6="/action/41267"  # Marker 27
 addr7="/action/41268"  # Marker 28
 addr8="/action/41269"  # Marker 29
 addr9="/action/41270"  # Marker 30
-addr10="/marker/18"  # Marker 31
-addr11="/marker/19"  # Marker 32
-addr12="/marker/20"  # Marker 33
-addr13="/marker/21"  # Marker 34
-addr14="/marker/22"  # Marker 35
+addr10="/marker/20"  # Marker 31
+addr11="/marker/21"  # Marker 32
+addr12="/marker/22"  # Marker 33
+addr13="/marker/23"  # Marker 34
+addr14="/marker/24"  # Marker 35
 addr15="/action/1007"  # Play
 addr16="/action/1016"  # Stop
 addr17="/action/40042"  # Stop (different action)
@@ -194,7 +194,9 @@ class GameUI:
         gma_client.send_message("/gma3/cmd", "Go+ Sequence 41")
         time.sleep(0.9)
         gma_client.send_message("/gma3/cmd", "On Sequence 207")
-        trigger_reaper(addr13)
+        trigger_reaper(addr13)  # Jump to Marker 34
+        time.sleep(0.1)  # Small delay to ensure marker jump completes
+        trigger_reaper(addr15)  # Start playing
         startup_complete = True
         self.show_game_result("Ready")
 
@@ -223,6 +225,9 @@ def print_args(addr, *args):
         gma_client.send_message("/gma3/cmd", "Level Start")
         ui.update_level(current_level)
         ui.update_tries(3)
+        # Don't return here - continue to start timing
+        start_time = time.time()
+        timing_started = True
         return
 
     if not timing_started:
@@ -240,6 +245,7 @@ def print_args(addr, *args):
         trigger_osc(count)
 
     if count == level_goals[current_level]:
+        trigger_reaper(addr16)  # Stop current level audio first!
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
         gma_client.send_message("/gma3/cmd", "Win Stage")
