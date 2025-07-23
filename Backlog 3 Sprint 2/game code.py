@@ -58,24 +58,28 @@ def get_stage_color(level):
 
 def level_start_sequence(level):
     if level == 1:
+        trigger_reaper_with_level_delay(addr6, 1)  # Level 1 start with 30s delay
         for _ in range(6):
             light_up(LED_COUNT, Color(0, 0, 255)); time.sleep(0.25)
             light_up(LED_COUNT, 0); time.sleep(0.25)
         light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
         light_up(LED_COUNT, 0)
     elif level == 2:
+        trigger_reaper_with_level_delay(addr6, 2)  # Level 2 start with 40s delay (same as Level 1)
         for _ in range(5):
             light_up(LED_COUNT, Color(255, 140, 0)); time.sleep(0.1)
             light_up(LED_COUNT, 0); time.sleep(0.1)
         light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
         light_up(LED_COUNT, 0)
     elif level == 3:
+        trigger_reaper_with_level_delay(addr7, 3)  # Level 3 start with 50s delay
         for _ in range(3):
             light_up(LED_COUNT, Color(255, 255, 0)); time.sleep(0.3)
             light_up(LED_COUNT, 0); time.sleep(0.3)
         light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
         light_up(LED_COUNT, 0)
     elif level == 4:
+        trigger_reaper_with_level_delay(addr8, 4)  # Level 4 start with 60s delay
         for i in range(6):
             strip.setPixelColor(i * 50, Color(0, 255, 0)); strip.show(); time.sleep(0.1)
         light_up(LED_COUNT, Color(0, 255, 0)); time.sleep(2)
@@ -85,7 +89,7 @@ def shutdown_sequences(level):
     cues = ["23 cue 1", "23 cue 2", "23 cue 3", "23 cue 4"]
     for cue in cues:
         gma_client.send_message("/gma3/cmd", f"Off Sequence {cue}")
-    reaper_client.send_message("/action/40042", 1.0)  # Stop
+    trigger_reaper(addr17)  # Stop
 
 # Game state
 count = 0
@@ -110,17 +114,55 @@ level_times = {1: 30, 2: 40, 3: 50, 4: 60}
 
 def get_level_time(level): return level_times.get(level, 30)
 
-def trigger_reaper(action_id):
-    reaper_client.send_message("/action/40044", 1.0)
-    reaper_client.send_message(f"/action/{action_id}", 1.0)
-    reaper_client.send_message("/action/40045", 1.0)
+def trigger_reaper(addr, msg=1.0):
+    """Send OSC message to Reaper with the specified address and message"""
+    from pythonosc import udp_client
+    client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+    client.send_message(addr, msg)
+
+def trigger_reaper_with_delay(marker_addr, play_addr, stop_addr, delay=20):
+    """Jump to marker, trigger play, wait for delay, then trigger stop - runs in background"""
+    def delayed_sequence():
+        trigger_reaper(marker_addr)  # Jump to marker first
+        time.sleep(0.1)  # Small delay to ensure marker jump completes
+        trigger_reaper(play_addr)  # Trigger play
+        time.sleep(delay)  # Wait for specified delay
+        trigger_reaper(stop_addr)  # Trigger stop
+    
+    # Run in background thread so it doesn't block game logic
+    threading.Thread(target=delayed_sequence, daemon=True).start()
+
+def trigger_reaper_with_level_delay(marker_addr, level):
+    """Trigger level start with delay matching level duration"""
+    level_delay = level_times.get(level, 30)
+    trigger_reaper_with_delay(marker_addr, addr15, addr16, level_delay)
+
+#OSC Address
+addr="/action/41261"  # Marker 21
+addr1="/action/41262"  # Marker 22
+addr2="/action/41263"  # Marker 23
+addr3="/action/41264"  # Marker 24
+addr4="/action/41265"  # Marker 25
+addr5="/action/41266"  # Marker 26
+addr6="/action/41267"  # Marker 27
+addr7="/action/41268"  # Marker 28
+addr8="/action/41269"  # Marker 29
+addr9="/action/41270"  # Marker 30
+addr10="/marker/18"  # Marker 31
+addr11="/marker/19"  # Marker 32
+addr12="/marker/20"  # Marker 33
+addr13="/marker/21"  # Marker 34
+addr14="/marker/22"  # Marker 35
+addr15="/action/1007"  # Play
+addr16="/action/1016"  # Stop
+addr17="/action/40042"  # Stop (different action)
 
 def trigger_osc(count):
     if current_level in milestones:
-        if count == milestones[current_level][0]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 1"); trigger_reaper("41261")
-        elif count == milestones[current_level][1]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 2"); trigger_reaper("41262")
-        elif count == milestones[current_level][2]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 3"); trigger_reaper("41263")
-        elif count == milestones[current_level][3]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 4"); trigger_reaper("41264"); trigger_reaper("41270")
+        if count == milestones[current_level][0]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 1"); trigger_reaper(addr)
+        elif count == milestones[current_level][1]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 2"); trigger_reaper(addr1)
+        elif count == milestones[current_level][2]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 3"); trigger_reaper(addr2)
+        elif count == milestones[current_level][3]: gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 4"); trigger_reaper(addr3); trigger_reaper(addr9)
 
 class GameUI:
     def __init__(self):
@@ -152,7 +194,7 @@ class GameUI:
         gma_client.send_message("/gma3/cmd", "Go+ Sequence 41")
         time.sleep(0.9)
         gma_client.send_message("/gma3/cmd", "On Sequence 207")
-        trigger_reaper("/marker/21")
+        trigger_reaper(addr13)
         startup_complete = True
         self.show_game_result("Ready")
 
@@ -201,14 +243,14 @@ def print_args(addr, *args):
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
         gma_client.send_message("/gma3/cmd", "Win Stage")
-        trigger_reaper("41270")
+        trigger_reaper_with_delay(addr9, addr15, addr16)  # Jump to marker, play, then stop after 20s
         shutdown_sequences(current_level)
         ui.show_stage_result("Win")
 
         if current_level == max_levels:
             gma_client.send_message("/gma3/cmd", "Go+ sequence 23")
             gma_client.send_message("/gma3/cmd", "Go sequence 33")
-            reaper_client.send_message("/marker/19")
+            trigger_reaper_with_delay(addr11, addr15, addr16)  # Jump to marker, play, then stop after 20s
             ui.show_game_result("Win")
             game_started = False
             timing_started = False
@@ -241,13 +283,13 @@ def start_game_logic():
                     ui.update_tries(3 - stage_tries)
                     red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
                     gma_client.send_message("/gma3/cmd", "Lose Stage")
-                    reaper_client.send_message("/marker/18")
+                    trigger_reaper_with_delay(addr10, addr15, addr16)  # Jump to marker, play, then stop after 20s
                     shutdown_sequences(current_level)
                     ui.show_stage_result("Lose")
 
                     if stage_tries >= 3:
                         gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
-                        reaper_client.send_message("/marker/20")
+                        trigger_reaper_with_delay(addr12, addr15, addr16)  # Jump to marker, play, then stop after 20s
                         ui.show_game_result("Lose")
                         game_started = False
                         timing_started = False
