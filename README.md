@@ -363,7 +363,7 @@ finally:
 - ---
 
 ## MVP
-###
+### Audio
 | Marker | REAPER Action   | Command ID   |
 |:------:|:---------------:|:------------:|
 | 21     | Load sound 1     | 41261        |
@@ -379,6 +379,15 @@ finally:
 | 31     | Lose stage       | /marker/18   |
 | 32     | Win game         | /marker/19   |
 | 33     | Lose game        | /marker/20   |
+
+### Lighting
+| Sequence/Cue|     Action    | 
+|:-----------:|:-------------:|
+| 23          |   Charging    |
+| 32          |   Game Lose   |
+| 33          |   Game Win    |
+| 38          |   Game Play   |
+| 41          |   During Game | 
 
 
 
