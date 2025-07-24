@@ -7,7 +7,7 @@ from pythonosc import udp_client, dispatcher, osc_server
 # OSC addresses
 GMA_IP, GMA_PORT       = "192.168.254.213", 2000
 REAPER_IP, REAPER_PORT = "192.168.254.12", 8000
-LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001
+LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8005
 
 gma_client    = udp_client.SimpleUDPClient(GMA_IP, GMA_PORT)
 reaper_client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
