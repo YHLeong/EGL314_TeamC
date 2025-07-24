@@ -221,7 +221,7 @@ def print_args(addr, *args):
 
     if not game_started:
         game_started = True
-        level_start_sequence(current_level)
+        level_start_sequence(current_level)  # First sensor press - triggers level start audio/LEDs
         gma_client.send_message("/gma3/cmd", "Level Start")
         ui.update_level(current_level)
         ui.update_tries(3)
