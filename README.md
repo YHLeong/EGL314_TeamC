@@ -23,12 +23,16 @@ Players will:
 
 ### 🛠️ Hardware
 -  1x Raspberry Pi 4 Model B  
--  6x AoKu AK-399 Car Seat Pressure Sensors  
+-  6x AoKu AK-399 Car Seat Pressure Sensors 
+-  1x Neopixel (300 pixels) 
 -  6x WAGO Connectors  
 -  2x LAN cables
 -  6x Carboard Button
 -  1x Rasp Pi display V1
 -  1x Display holder
+-  1x Board (hold neopixel)
+-  2x Holders for board
+-  1x cardboard box to house electronics
 
 ### 💻 Software
 -  Random Number Generator  
@@ -44,11 +48,31 @@ Cabling
 Since there are six sensors I needed twelve wires in total. I didn't want to use jumper wires as there would be too many points of failure over a long cable. I decided to use LAN cables by isolating two wires per sensor. Since a LAN cable only has four pairs and I needed six, I used two LAN cables.
 
 Props
-- Buttons
-- Screen holder
-- Prop Materials: Cardboard Glue 
+-  Buttons
+-  Screen holder
+-  Board for Neoopixel
+-  Holders for Neopixel board
+-  Box to house electronics
 
-We are using cardboard to make everything. For the buttons, we layered three pieces of cardboard and carved a shape into the top two layers to create a 3D effect. For the screen holder, I used glue and cardboard to make an angled piece of cardboard with a hole for the screen. 
+We are using cardboard to make everything. For the buttons, we layered two pieces of cardboard and carved numbers into the top two layers to create a 3D effect. I then inserted the sensor inbetween the pieces of cardboard.
+
+For the screen holder, we used glue and cardboard to make an angled piece of cardboard with a hole for the screen. 
+
+In our games story, we need a box to act as a power generator, we decided to use a painted cardboard box to hide our electronics.
+
+For the Neopixel, we used nano tape to tape the neopixel to the board in a lightning pattern. We also made sure to leave some excess that could drop behind the box we are using to hide all the electronics.
+
+Photos for reference:
+
+![Buttons with sensors inside](Photos/Buttons.png)
+
+![Raspi Screen](Photos/Screen.png)
+
+![Neopixel on the board with 3D printed mounts](Photos/Neopixel.png)
+
+![Box/Generator]Photos/(Box.png)
+
+![Station 2](Photos/Station_2.png)
 
 
 
@@ -136,7 +160,7 @@ except KeyboardInterrupt:
 - Catches the KeyboardInterrupt exception and prints a message before exiting.
 ---
 
-## Connection []()
+
 
 
 ## Prove Of Concept - [Click Here]()insert link here
