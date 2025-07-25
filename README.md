@@ -679,3 +679,14 @@ shutdown_sequences(current_level)  # Clean stop
 | 31     | Lose stage       | /marker/20   |
 | 32     | Win game         | /marker/21   |
 | 33     | Lose game        | /marker/22   |
+
+
+## Lighting Sequence Configuration
+| Sequence |  Action            | 
+|:--------:|:------------------:|
+|    23    | Charging lights    | 
+|    32    | Lose game          | 
+|    33    | Win game           | 
+|    36    | Lights during game |
+|    38    | Players lights     | 
+|    41    | Start game         |
