@@ -64,15 +64,15 @@ For the Neopixel, we used nano tape to tape the neopixel to the board in a light
 
 Photos for reference:
 
-![Buttons with sensors inside](Buttons.png)
+![Buttons with sensors inside](Photos/Buttons.png)
 
-![Raspi Screen](Screen.png)
+![Raspi Screen](Photos/Screen.png)
 
-![Neopixel on the board with 3D printed mounts](Neopixel.png)
+![Neopixel on the board with 3D printed mounts](Photos/Neopixel.png)
 
-![Box/Generator](Box.png)
+![Box/Generator]Photos/(Box.png)
 
-![Station 2](Station_2.png)
+![Station 2](Photos/Station_2.png)
 
 
 
