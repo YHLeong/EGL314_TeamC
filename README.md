@@ -2,7 +2,7 @@
 
 ## 🎯 Introduction
 
-**Wall Glyphs: Silent Sequence** is an immersive, non-verbal multiplayer game designed for **3 to 4 players**. The objective? Collaborate **without speaking or using visual cues** to activate six glyphs on a wall in the correct order. 🤐✨
+**Galactic Charge-Up** is an immersive, non-verbal multiplayer game designed for **3 to 4 players**. The objective? Collaborate **without speaking or using visual cues** to activate six glyphs on a wall in the correct order. 🤐✨
 
 Players must rely solely on intuition and audio cues to work together and solve the sequence challenge!
 
@@ -434,210 +434,234 @@ LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001  # Game Controller
 - **REAPER**: Receives audio marker triggers and playback control
 - **Local**: Listens for sensor input via OSC messages
 
----
+## 🎵 REAPER Audio Control Functions
 
-### 💡 LED Strip Configuration
-```python
-LED_COUNT = 300
-strip = Adafruit_NeoPixel(LED_COUNT, 18, 800000, 10, False, 128)
-strip.begin()
-```
-- **300 LEDs** on GPIO pin 18
-- **800kHz** signal frequency
-- **128** brightness level for optimal visibility
+### 🧾 Overview
 
-### 🎨 LED Animation Functions
-```python
-def light_up(n, color):
-    for i in range(n):
-        strip.setPixelColor(i, color)
-    strip.show()
-
-def red_dim(n):
-    for i in range(n - 1, -1, -1):
-        strip.setPixelColor(i, Color(255, 0, 0))
-        strip.show()
-        time.sleep(0.005)
-        strip.setPixelColor(i, 0)
-        strip.show()
-```
-- **Instant fill**: `light_up()` for progress visualization
-- **Animated dimming**: `red_dim()` for failure feedback with reverse countdown
-- **Stage-specific colors**: Dynamic color mapping based on difficulty level
+These Python functions provide a **comprehensive OSC-based interface** for controlling **REAPER audio software** from the Raspberry Pi game controller. The system handles **marker navigation**, **audio playback control**, and **automated timing sequences** for seamless audio-visual synchronization across different game stages and events.
 
 ---
 
-### 🎮 Game Progression System
+### 🌐 Network Configuration
 ```python
-goals = {1: 40, 2: 80, 3: 120, 4: 240}
-times = {1: 30, 2: 40, 3: 50, 4: 60}
-milestones = {
-    1: [10, 20, 30, 40],
-    2: [20, 40, 60, 80],
-    3: [30, 60, 90, 120],
-    4: [60, 120, 180, 240]
-}
+REAPER_IP, REAPER_PORT = "192.168.254.12", 8000  # REAPER Audio Workstation
 ```
-- **4 Levels** with increasing difficulty
-- **Progressive goals**: 40 → 80 → 120 → 240 sensor activations
-- **Extended time limits**: 30s → 60s per level
-- **Milestone triggers**: Audio/lighting cues at 25%, 50%, 75%, 100% completion
+- **REAPER Software**: Running on dedicated PC at IP `192.168.254.12`
+- **OSC Port**: Listening on port `8000` for incoming commands
+- **Network Protocol**: UDP for low-latency audio control
 
 ---
 
-### 🎵 Audio Integration (REAPER)
+### 🎵 Core Function: `trigger_reaper(addr, msg=1.0)`
+
 ```python
-def trigger_reaper(id):
-    global level
-    stage_time = times.get(level, 30)
-    
-    if id.startswith("/"):
-        reaper.send_message(id, 1.0)  # Full OSC address
-    else:
-        reaper.send_message(f"/action/{id}", 1.0)  # Action number
-    
-    reaper.send_message("/action/1007", 1.0)   # Play
-    threading.Timer(stage_time, lambda: reaper.send_message("/action/1016", 1.0)).start()
+def trigger_reaper(addr, msg=1.0):
+    """Send OSC message to Reaper with the specified address and message"""
+    client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+    client.send_message(addr, msg)
 ```
-- **Dual format support**: Handles both action numbers (`"41261"`) and full paths (`"/marker/18"`)
-- **Auto-play**: Jumps to marker and starts playback automatically
-- **Timed stop**: Audio stops after stage time limit expires
-- **Milestone audio**: Different markers for progress points and game events
+
+#### 🎯 Purpose
+- **Single OSC command** sender to REAPER
+- **Immediate execution** without delays or threading
+- **Foundation function** used by all other audio control functions
+
+#### 📥 Parameters
+- **`addr`**: OSC address string (e.g., `"/action/41261"`, `"/marker/20"`)
+- **`msg`**: Message value (default: `1.0` for trigger commands)
+
+#### 🔧 Usage Examples
+```python
+trigger_reaper("/action/41270")  # Jump to Marker 30
+trigger_reaper("/action/1007")   # Start playback
+trigger_reaper("/action/1016")   # Stop playback
+```
 
 ---
 
-### 💡 Lighting Integration (GrandMA3)
+### ⏱️ Advanced Function: `trigger_reaper_with_delay()`
+
 ```python
-def trigger_osc(n):
-    cues = milestones.get(level, [])
-    if n == cues[0]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 1"); trigger_reaper("41261")
-    elif n == cues[1]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 2"); trigger_reaper("41262")
-    elif n == cues[2]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 3"); trigger_reaper("41263")
-    elif n == cues[3]: gma.send_message("/gma3/cmd", "Go Sequence 23 cue 4"); trigger_reaper("41264")
+def trigger_reaper_with_delay(marker_addr, play_addr, stop_addr, delay=20):
+    """Jump to marker, trigger play, wait for delay, then trigger stop - runs in background"""
+    def delayed_sequence():
+        trigger_reaper(marker_addr)  # Jump to marker first
+        time.sleep(0.5)  # Small delay to ensure marker jump completes
+        trigger_reaper(play_addr)  # Trigger play
+        time.sleep(delay)  # Wait for specified delay
+        trigger_reaper(stop_addr)  # Trigger stop
+    # Run in background thread so it doesn't block game logic
+    threading.Thread(target=delayed_sequence, daemon=True).start()
 ```
-- **Milestone lighting**: Triggers specific lighting sequences at progress points
-- **Synchronized audio**: Each lighting cue paired with corresponding audio marker
-- **Stage management**: Separate sequences for wins, losses, and level transitions
+
+#### 🎯 Purpose
+- **Complete audio sequence** management: Jump → Play → Stop
+- **Non-blocking execution** using background threads
+- **Automated timing** for fixed-duration audio clips
+
+#### 📥 Parameters
+- **`marker_addr`**: OSC address for marker jump (e.g., `addr9` = Marker 30)
+- **`play_addr`**: OSC address for play command (always `addr15` = `/action/1007`)
+- **`stop_addr`**: OSC address for stop command (always `addr16` = `/action/1016`)
+- **`delay`**: Duration in seconds before auto-stop (default: 20 seconds)
+
+#### 🔄 Sequence Flow
+1. **Jump to marker** → Positions playhead at specific timeline location
+2. **Wait 0.5s** → Ensures marker jump completes before next command
+3. **Start playback** → Audio begins from marker position
+4. **Wait (delay)** → Audio plays for specified duration
+5. **Stop playback** → Automatic cleanup after timer expires
+
+#### 🧵 Threading Benefits
+- **Game continues** while audio plays in background
+- **Sensor input** remains responsive during audio sequences
+- **UI updates** not blocked by audio timing
 
 ---
 
-### 🖥️ GUI Interface
+### 🎮 Level-Specific Function: `trigger_reaper_with_level_delay()`
+
 ```python
-class GameUI:
-    def __init__(self):
-        self.root = tk.Tk()
-        self.root.attributes("-fullscreen", True)
-        self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
-        self.root.bind("<space>", self.start_sequence)
-        
-        self.labels = {
-            "level":  tk.Label(self.root, text="Level: 1", font=("Arial", 28)),
-            "time":   tk.Label(self.root, text="Time: 0", font=("Arial", 28)),
-            "result": tk.Label(self.root, text="Stage: In Progress", fg="blue"),
-            "game":   tk.Label(self.root, text="Game: Waiting", fg="gray"),
-            "tries":  tk.Label(self.root, text="Tries Left: 3", font=("Arial", 28))
-        }
+def trigger_reaper_with_level_delay(marker_addr, level):
+    """Trigger level start with delay matching level duration"""
+    level_delay = level_times.get(level, 30)
+    trigger_reaper_with_delay(marker_addr, addr15, addr16, level_delay)
 ```
-- **Fullscreen mode**: Immersive gaming experience
-- **Real-time updates**: Level, timer, tries, and status indicators
-- **Keyboard controls**: Spacebar to start, Escape to exit fullscreen
-- **Color-coded feedback**: Success (green), failure (red), progress (blue)
+
+#### 🎯 Purpose
+- **Level-specific audio** with dynamic timing
+- **Progressive difficulty** through varied audio durations
+- **Wrapper function** that calculates appropriate delay based on level
+
+#### 📥 Parameters
+- **`marker_addr`**: Marker for level start audio (addr6/addr7/addr8)
+- **`level`**: Current game level (1-4)
+
+#### ⏱️ Level Timing Mapping
+```python
+level_times = {1: 30, 2: 40, 3: 50, 4: 60}
+```
+- **Level 1**: 30-second audio duration
+- **Level 2**: 40-second audio duration  
+- **Level 3**: 50-second audio duration
+- **Level 4**: 60-second audio duration
+
+#### 🔧 Usage Example
+```python
+trigger_reaper_with_level_delay(addr6, 1)  # Level 1: 30s audio at Marker 27
+trigger_reaper_with_level_delay(addr7, 3)  # Level 3: 50s audio at Marker 28
+```
 
 ---
 
-### 📡 OSC Communication Handler
-```python
-def print_args(addr, *args):
-    global count, started, timing, start_time, timeout, level, tries, waiting
+### 🎵 No-Stop Variant: `trigger_reaper_with_delay_no_stop()`
 
-    if not ready: return
-    
-    if not started:
-        started = True
-        level_start_sequence(level)
-        return
-        
-    if not timing:
-        start_time = time.time()
-        timing = True
-        return
-        
-    count += 1
-    if count in milestones.get(level, []):
-        progress = int(LED_COUNT * (count / goals[level]))
-        light_up(progress, get_stage_color(level))
-        trigger_osc(count)
+```python
+def trigger_reaper_with_delay_no_stop(marker_addr, play_addr, delay=20):
+    """Jump to marker, trigger play, wait for delay - NO STOP COMMAND - runs in background"""
+    def delayed_sequence():
+        trigger_reaper(marker_addr)  # Jump to marker first
+        time.sleep(0.5)  # Small delay to ensure marker jump completes
+        trigger_reaper(play_addr)  # Trigger play
+        time.sleep(delay)  # Wait for specified delay
+        # NO STOP COMMAND - let shutdown_sequences handle it
+    # Run in background thread so it doesn't block game logic
+    threading.Thread(target=delayed_sequence, daemon=True).start()
 ```
-- **State management**: Handles game initialization, timing, and progress tracking
-- **Sensor counting**: Increments progress on each OSC message received
-- **Visual feedback**: Updates LED strip to show completion percentage
-- **Milestone detection**: Triggers audio/lighting when reaching progress points
+
+#### 🎯 Purpose
+- **Manual stop control** for complex audio scenarios
+- **Prevents double-stop** commands that cause REAPER confusion
+- **Deferred cleanup** handled by `shutdown_sequences()` function
+
+#### ❌ Key Difference
+- **No automatic stop** after delay expires
+- **External management** required for audio cleanup
+- **Prevents conflicts** with multiple stop commands in rapid succession
+
+#### 🔧 Usage Scenario
+```python
+# Win stage audio - let shutdown_sequences handle stopping
+trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20)
+shutdown_sequences(current_level)  # This handles the stop command
+```
 
 ---
 
-### ⏱️ Real-time Game Loop
+### 🎮 Level-Specific No-Stop: `trigger_reaper_with_level_delay_no_stop()`
+
 ```python
-def start_game_logic():
-    while True:
-        if timing and not timeout:
-            elapsed = time.time() - start_time
-            remaining = times.get(level, 30) - elapsed
-            ui.update("time", f"Time: {max(0, int(remaining))}")
-            
-            if elapsed > times[level] and count < goals[level]:
-                timeout = True
-                tries += 1
-                trigger_reaper("/marker/18")  # Failure audio
-                
-        time.sleep(0.01)
+def trigger_reaper_with_level_delay_no_stop(marker_addr, level):
+    """Trigger level start with delay matching level duration - NO STOP"""
+    level_delay = level_times.get(level, 30)
+    trigger_reaper_with_delay_no_stop(marker_addr, addr15, level_delay)
 ```
-- **60Hz update rate**: Smooth timer and status updates
-- **Timeout detection**: Automatically fails stage when time expires
-- **Try management**: Tracks failed attempts (3 strikes = game over)
-- **Non-blocking**: Runs in separate thread to maintain GUI responsiveness
+
+#### 🎯 Purpose
+- **Level audio** without automatic stop commands
+- **Clean transition** between game stages
+- **Single stop point** managed by `shutdown_sequences()`
+
+#### 🔧 Benefits
+- **Eliminates transport confusion** caused by multiple rapid stop commands
+- **Smoother audio transitions** between levels
+- **Centralized cleanup** through shutdown function
 
 ---
 
-### 🏆 Win/Loss Logic
-```python
-if count == goals[level]:
-    flash_bpm(LED_COUNT)
-    green_dim(LED_COUNT)
-    trigger_reaper("41270")  # Stage win audio
-    
-    if level == MAX_LEVEL:
-        trigger_reaper("/marker/19")  # Game win audio
-        ui.update("game", "Game: Win", "green")
-    else:
-        level += 1
-        waiting = True
-```
-- **Stage completion**: Visual celebration with LED animations
-- **Progressive difficulty**: Automatic advancement to next level
-- **Game completion**: Special audio/visual for final victory
-- **Failure handling**: Audio feedback and retry system with limited attempts
+### 📡 OSC Address Mapping
+
+#### 🎵 Audio Categories
+- **Progress Sounds**: Markers 21-26 for milestone feedback
+- **Level Audio**: Markers 27-29 for stage-specific background music
+- **Event Audio**: Markers 30-35 for win/lose/game state sounds
+- **Control Commands**: Actions 1007/1016 for playback control
 
 ---
 
-### 🧵 Threaded Architecture
+### 🎮 Integration with Game Flow
+
+#### 🚀 Game Startup
 ```python
-threading.Thread(target=start_game_logic, daemon=True).start()
-ui.root.mainloop()
+trigger_reaper(addr13)  # Jump to BGM (Marker 34)
+trigger_reaper(addr15)  # Start playing background music
 ```
-- **Main thread**: GUI event loop for responsive interface
-- **Game thread**: Core game logic and timing (daemon mode)
-- **OSC thread**: Network communication handler (auto-managed)
-- **Timer threads**: Audio stop scheduling (background)
+
+#### 🎯 Level Start
+```python
+trigger_reaper_with_level_delay(addr6, 1)  # Level 1 with 30s duration
+```
+
+#### 🏆 Win Condition
+```python
+trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20)  # Win audio
+shutdown_sequences(current_level)  # Clean stop
+```
+
+#### 💀 Lose Condition
+```python
+trigger_reaper_with_delay_no_stop(addr10, addr15, delay=20)  # Lose audio
+shutdown_sequences(current_level)  # Clean stop
+```
 
 ---
 
-### 🔧 Hardware Integration
-- **Raspberry Pi 4**: Main controller running Python game logic
-- **WS281x LED Strip**: 300-LED visual progress indicator
-- **OSC Sensors**: External devices sending activation signals
-- **Network**: Ethernet connection for reliable OSC communication
-- **Audio**: REAPER software on separate PC for immersive sound
-- **Lighting**: GrandMA3 console for professional stage lighting effects
+### 🛡️ Error Prevention Features
+
+#### 🚫 Double-Stop Prevention
+- **No-stop variants** prevent multiple stop commands in rapid succession
+- **Centralized cleanup** through `shutdown_sequences()` function
+- **Transport stability** maintained during complex audio transitions
+
+#### ⏱️ Timing Synchronization
+- **0.5-second delays** ensure marker jumps complete before play commands
+- **Level-specific durations** match gameplay timing requirements
+- **Background threading** prevents audio timing from blocking game logic
+
+#### 🔄 Graceful Degradation
+- **Default values** provided for missing level configurations
+- **Daemon threads** automatically clean up on program exit
+- **Exception handling** maintains system stability during network issues
 
 ---
 
@@ -654,6 +678,6 @@ ui.root.mainloop()
 | 28     | Level 2 start    | 41268        |
 | 29     | Level 3 start    | 41269        |
 | 30     | Win stage        | 41270        |
-| 31     | Lose stage       | /marker/18   |
-| 32     | Win game         | /marker/19   |
-| 33     | Lose game        | /marker/20   |
+| 31     | Lose stage       | /marker/20   |
+| 32     | Win game         | /marker/21   |
+| 33     | Lose game        | /marker/22   |
