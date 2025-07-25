@@ -2,20 +2,16 @@
 
 ## 🎯 Introduction
 
-**Galactic Charge-Up** is an immersive, non-verbal multiplayer game designed for **3 to 4 players**. The objective? Collaborate **without speaking or using visual cues** to activate six glyphs on a wall in the correct order. 🤐✨
-
-Players must rely solely on intuition and audio cues to work together and solve the sequence challenge!
+**Galactic Charge-Up** is an immersive, non-verbal multiplayer game designed for **1 to 3 players**. The objective is to **step on pressure sensorr** to charge all 4 battery before **time runs out**. 🤐✨
 
 ---
 
 ## 🕹️ Objective
 
 Players will:
-- Observe a light-based demo of the correct glyph sequence 🔆
-- Receive a **spatial audio signal** 🎧 to begin
-- Step on **pressure-sensitive stones** 🪨 in the correct order
-- Complete the sequence within a **set time limit** ⏱️
-
+- Work together to charge all 4 batteries
+- Step on **Charging pads** 🪨 untill battery is full charged
+- Complete charging each battery within a **set time limit** ⏱️
 
 ---
 
@@ -23,7 +19,7 @@ Players will:
 
 ### 🛠️ Hardware
 -  1x Raspberry Pi 4 Model B  
--  6x AoKu AK-399 Car Seat Pressure Sensors 
+-  6x OEM Pressure Sensors 
 -  1x Neopixel (300 pixels) 
 -  6x WAGO Connectors  
 -  2x LAN cables
@@ -35,8 +31,10 @@ Players will:
 -  1x cardboard box to house electronics
 
 ### 💻 Software
--  Random Number Generator  
+-  OSC for Reaper and GrandMA3
 -  Sensor Signal Detector
+-  Timer
+-  GUI
 ---
 
 
@@ -434,7 +432,7 @@ LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001  # Game Controller
 - **REAPER**: Receives audio marker triggers and playback control
 - **Local**: Listens for sensor input via OSC messages
 
-## 🎵 REAPER Audio Control Functions
+## 🎵 REAPER Audio Control Functions - *Developed by Yu Hang*
 
 ### 🧾 Overview
 
