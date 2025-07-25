@@ -98,7 +98,33 @@ This is the box we are using as our 'generator' and where we store our electroni
 
 
 
-## 🧭 System Diagram
-![System Diagram](AssetsFolder/SystemDiagram_Updated.png)
 
----
+# System Diagram
+
+```mermaid
+graph LR
+
+    Sensor1 --Dupont wire(22)----> RaspberryPi_Client
+    Sensor2 --Dupont Wire(6)----> RaspberryPi_Client
+    Sensor3 --Dupont Wire(19)----> RaspberryPi_Client
+    Sensor4 --Dupont Wire(16)----> RaspberryPi_Client
+    Sensor5 --Dupont Wire(20)----> RaspberryPi_Client
+    Sensor6 --Dupont Wire(21)----> RaspberryPi_Client
+
+    RaspberryPi_Client --Wireless-->RaspberryPi_Server
+
+
+
+    RaspberryPi_Server --Wireless--> RaspberryPi_Master
+    RaspberryPi_Master --wireless--> Laptop_Reaper
+    Laptop_Reaper --LAN--> Yamaha_QL1
+    RaspberryPi_Master --LAN--> GrandMA3
+
+    GrandMA3 ---LAN--> sCAN
+    sCAN --DMX --> Lighting_fixures
+    Yamaha_QL1 --DANTE(LAN)--> Yamaha_MTX-5
+    Yamaha_MTX-5 --Terminal Block--> Yamaha_VXS5_#1
+    Yamaha_MTX-5 --Terminal Block--> Yamaha_VXS5_#12
+
+
+```
