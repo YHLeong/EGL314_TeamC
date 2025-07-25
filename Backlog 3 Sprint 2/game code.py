@@ -7,7 +7,7 @@ from pythonosc import udp_client, dispatcher, osc_server
 # OSC addresses
 GMA_IP, GMA_PORT       = "192.168.254.213", 2000
 REAPER_IP, REAPER_PORT = "192.168.254.12", 8000
-LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8005
+LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001
 
 gma_client    = udp_client.SimpleUDPClient(GMA_IP, GMA_PORT)
 reaper_client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
@@ -89,7 +89,7 @@ def shutdown_sequences(level):
     cues = ["23 cue 1", "23 cue 2", "23 cue 3", "23 cue 4"]
     for cue in cues:
         gma_client.send_message("/gma3/cmd", f"Off Sequence {cue}")
-    trigger_reaper(addr17)  # Stop
+    trigger_reaper(addr16)  # Stop
 
 # Game state
 count = 0
@@ -116,7 +116,6 @@ def get_level_time(level): return level_times.get(level, 30)
 
 def trigger_reaper(addr, msg=1.0):
     """Send OSC message to Reaper with the specified address and message"""
-    from pythonosc import udp_client
     client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
     client.send_message(addr, msg)
 
@@ -124,11 +123,10 @@ def trigger_reaper_with_delay(marker_addr, play_addr, stop_addr, delay=20):
     """Jump to marker, trigger play, wait for delay, then trigger stop - runs in background"""
     def delayed_sequence():
         trigger_reaper(marker_addr)  # Jump to marker first
-        time.sleep(0.1)  # Small delay to ensure marker jump completes
+        time.sleep(0.5)  # Small delay to ensure marker jump completes
         trigger_reaper(play_addr)  # Trigger play
         time.sleep(delay)  # Wait for specified delay
         trigger_reaper(stop_addr)  # Trigger stop
-    
     # Run in background thread so it doesn't block game logic
     threading.Thread(target=delayed_sequence, daemon=True).start()
 
@@ -136,6 +134,22 @@ def trigger_reaper_with_level_delay(marker_addr, level):
     """Trigger level start with delay matching level duration"""
     level_delay = level_times.get(level, 30)
     trigger_reaper_with_delay(marker_addr, addr15, addr16, level_delay)
+
+def trigger_reaper_with_delay_no_stop(marker_addr, play_addr, delay=20):
+    """Jump to marker, trigger play, wait for delay - NO STOP COMMAND - runs in background"""
+    def delayed_sequence():
+        trigger_reaper(marker_addr)  # Jump to marker first
+        time.sleep(0.5)  # Small delay to ensure marker jump completes
+        trigger_reaper(play_addr)  # Trigger play
+        time.sleep(delay)  # Wait for specified delay
+        # NO STOP COMMAND - let shutdown_sequences handle it
+    # Run in background thread so it doesn't block game logic
+    threading.Thread(target=delayed_sequence, daemon=True).start()
+
+def trigger_reaper_with_level_delay_no_stop(marker_addr, level):
+    """Trigger level start with delay matching level duration - NO STOP"""
+    level_delay = level_times.get(level, 30)
+    trigger_reaper_with_delay_no_stop(marker_addr, addr15, level_delay)
 
 #OSC Address
 addr="/action/41261"  # Marker 21
@@ -155,7 +169,8 @@ addr13="/marker/23"  # Marker 34
 addr14="/marker/24"  # Marker 35
 addr15="/action/1007"  # Play
 addr16="/action/1016"  # Stop
-addr17="/action/40042"  # Stop (different action)
+
+
 
 def trigger_osc(count):
     if current_level in milestones:
@@ -246,10 +261,12 @@ def print_args(addr, *args):
 
     if count == level_goals[current_level]:
         trigger_reaper(addr16)  # Stop current level audio first!
+        time.sleep(0.5)
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
         gma_client.send_message("/gma3/cmd", "Win Stage")
-        trigger_reaper_with_delay(addr9, addr15, addr16)  # Jump to marker, play, then stop after 20s
+        time.sleep(0.3)  # Additional delay before win audio
+        trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20):  # type: ignore # Jump to marker, play, then stop after 20s
         shutdown_sequences(current_level)
         ui.show_stage_result("Win")
 
@@ -289,7 +306,7 @@ def start_game_logic():
                     ui.update_tries(3 - stage_tries)
                     red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
                     gma_client.send_message("/gma3/cmd", "Lose Stage")
-                    trigger_reaper_with_delay(addr10, addr15, addr16)  # Jump to marker, play, then stop after 20s
+                    trigger_reaper_with_delay_no_stop(addr10, addr15, delay=20)
                     shutdown_sequences(current_level)
                     ui.show_stage_result("Lose")
 
