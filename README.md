@@ -1,5 +1,47 @@
 # 🎮 EGL314 – Project Documentation
 
+## 📂 Table of Contents
+- [Introduction](#-introduction)
+- [Objective](#️-objective)
+- [Dependencies](#-dependencies)
+    - [Hardware](#️-hardware)
+    - [Software](#-software)
+- [Physical connections and Props](#physical-connections-and-props)
+- [System Diagram](#-system-diagram)
+- [Code Logic](#-code-logic)
+- [Random Number Generator](#-random-number-generator---click-here)
+    - [Python Packages Used](#-python-packages-used)
+- [Prove Of Concept](#prove-of-concept---click-hereinsert-link-here)
+- [GPIO Setup](#-gpio-setup)
+- [GUI Layout](#️-gui-layout)
+- [Game Flow](#-game-flow)
+- [Sequence Generation](#sequence-generation)
+- [Displaying Sequence](#️-displaying-sequence)
+- [Sensor Monitoring](#-sensor-monitoring)
+- [Sequence Validation](#️-sequence-validation)
+- [Countdown Timer](#️-countdown-timer)
+- [Stage Logic](#-stage-logic)
+- [MVP Stage](#mvp-stage---click-here)
+- [Network Setup](#-network-setup)
+- [REAPER Functions](#-reaper-audio-control-functions---developed-by-yu-hang)
+    - [Core Function](#-core-function-trigger_reaperaddr-msg10)
+    - [Advanced Function](#️-advanced-function-trigger_reaper_with_delay)
+    - [Level-Specific Function](#-level-specific-function-trigger_reaper_with_level_delay)
+    - [No-Stop Variant](#-no-stop-variant-trigger_reaper_with_delay_no_stop)
+    - [Level Specific No-Stop](#-level-specific-no-stop-trigger_reaper_with_level_delay_no_stop)
+    - [Integration with Game Flow](#-integration-with-game-flow)
+    - [Error Prevention Features](#️-error-prevention-features)
+- [REAPER Marker Configuration](#reaper-marker-configuration)
+- [Lighting Control with grandMA3 (via OSC)](#summary)
+    - [Core Command Example](#-core-command-example)
+    - [grandMA3 Command Function 1️⃣](#grandma3-command-function-1️⃣shutdown_sequenceslevel)
+    - [grandMA3 Command Function 2️⃣](#grandma3-command-function-2️⃣-trigger_osccount)
+    - [grandMA3 Command Function 3️⃣](#grandma3-command-function-3️⃣-gameuitrigger_startup_sequenceself-eventnone)
+- [Lighting Sequence Configuration](#lighting-sequence-configuration)
+
+
+
+
 ## 🎯 Introduction
 
 **Galactic Charge-Up** is an immersive, non-verbal multiplayer game designed for **1 to 3 players**. The objective is to **step on pressure sensors** to charge all 4 battery before **time runs out**. 🤐✨
@@ -743,7 +785,6 @@ def trigger_startup_sequence(self, event=None):
     time.sleep(0.3)
     gma_client.send_message("/gma3/cmd", "Go+ Sequence 41")
     time.sleep(0.9)
-    gma_client.send_message("/gma3/cmd", "On Sequence 207")
     startup_complete = True
     self.show_game_result("Ready")
 ```
@@ -752,7 +793,6 @@ def trigger_startup_sequence(self, event=None):
 - Initates the game's lighting system by activating sequences in grandMA3
 - Provides a visual startup animation
 - Sets internal game state flags to mark startup as complete
-
 
 ## Lighting Sequence Configuration
 | Sequence |  Action            | 
