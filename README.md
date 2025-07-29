@@ -2,7 +2,7 @@
 
 ## 🎯 Introduction
 
-**Galactic Charge-Up** is an immersive, non-verbal multiplayer game designed for **1 to 3 players**. The objective is to **step on pressure sensorr** to charge all 4 battery before **time runs out**. 🤐✨
+**Galactic Charge-Up** is an immersive, non-verbal multiplayer game designed for **1 to 3 players**. The objective is to **step on pressure sensor** to charge all 4 battery before **time runs out**. 🤐✨
 
 ---
 
@@ -10,7 +10,7 @@
 
 Players will:
 - Work together to charge all 4 batteries
-- Step on **Charging pads** 🪨 untill battery is full charged
+- Step on **Charging pads** 🪨 untill battery is fully charged
 - Complete charging each battery within a **set time limit** ⏱️
 
 ---
