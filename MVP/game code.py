@@ -260,20 +260,37 @@ def print_args(addr, *args):
         trigger_osc(count)
 
     if count == level_goals[current_level]:
-        trigger_reaper(addr16)  # Stop current level audio first!
-        time.sleep(0.5)
+        trigger_reaper(addr16)  # Stop current level audio
+        time.sleep(0.3)         # Shorter initial delay
+        
+        # Start win audio immediately in background
+        def win_stage_audio():
+            trigger_reaper(addr9)   # Jump to Marker 30
+            time.sleep(0.5)         # delay for 0.5s
+            trigger_reaper(addr15)  # Play win audio
+            time.sleep(20)          # delay for 20s
+            trigger_reaper(addr16)  # Stop win audio
+        threading.Thread(target=win_stage_audio, daemon=True).start()
+        
+        # LED animations happen while audio plays
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
         gma_client.send_message("/gma3/cmd", "Win Stage")
-        time.sleep(0.3)  # Additional delay before win audio
-        trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20):  # type: ignore # Jump to marker, play, then stop after 20s
-        shutdown_sequences(current_level)
         ui.show_stage_result("Win")
 
         if current_level == max_levels:
             gma_client.send_message("/gma3/cmd", "Go+ sequence 23")
             gma_client.send_message("/gma3/cmd", "Go sequence 33")
-            trigger_reaper_with_delay(addr11, addr15, addr16)  # Jump to marker, play, then stop after 20s
+            
+            # Start win game audio immediately in background (same pattern as win stage)
+            def win_game_audio():
+                trigger_reaper(addr11)  # Jump to Marker 32
+                time.sleep(0.5)         # delay for 0.5s
+                trigger_reaper(addr15)  # Play win game audio
+                time.sleep(20)          # delay for 20s
+                trigger_reaper(addr16)  # Stop win game audio
+            threading.Thread(target=win_game_audio, daemon=True).start()
+            
             ui.show_game_result("Win")
             game_started = False
             timing_started = False
@@ -306,13 +323,31 @@ def start_game_logic():
                     ui.update_tries(3 - stage_tries)
                     red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
                     gma_client.send_message("/gma3/cmd", "Lose Stage")
-                    trigger_reaper_with_delay_no_stop(addr10, addr15, delay=20)
+                    
+                    # Start lose stage audio immediately in background
+                    def lose_stage_audio():
+                        trigger_reaper(addr10)  # Jump to Marker 31
+                        time.sleep(0.5)         # delay for 0.5s
+                        trigger_reaper(addr15)  # Play lose stage audio
+                        time.sleep(20)          # delay for 20s
+                        trigger_reaper(addr16)  # Stop lose stage audio
+                    threading.Thread(target=lose_stage_audio, daemon=True).start()
+                    
                     shutdown_sequences(current_level)
                     ui.show_stage_result("Lose")
 
                     if stage_tries >= 3:
                         gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
-                        trigger_reaper_with_delay(addr12, addr15, addr16)  # Jump to marker, play, then stop after 20s
+                        
+                        # Start lose game audio immediately in background
+                        def lose_game_audio():
+                            trigger_reaper(addr12)  # Jump to Marker 33
+                            time.sleep(0.5)         # delay for 0.5s
+                            trigger_reaper(addr15)  # Play lose game audio
+                            time.sleep(20)          # delay for 20s
+                            trigger_reaper(addr16)  # Stop lose game audio
+                        threading.Thread(target=lose_game_audio, daemon=True).start()
+                        
                         ui.show_game_result("Lose")
                         game_started = False
                         timing_started = False
