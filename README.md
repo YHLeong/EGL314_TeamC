@@ -681,6 +681,79 @@ shutdown_sequences(current_level)  # Clean stop
 | 33     | Lose game        | /marker/22   |
 
 
+## Lighting Control with grandMA3 (via OSC)
+
+### Summary
+
+Lighting(grandMA3) in this project is handled by sending **OSC** messages to grandMA3 through the /gma3/cmd command. These messages execute the commands remotely, which enables **real-time** control of lighting sequences and cues directly from Python.
+
+---
+
+### 🔌 Core Command Example
+
+```python
+gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 1")
+```
+
+
+#### 🎯Purpose
+- This sends a single string command to the grandMA3 console, which matches the syntax and naming of preconfigured sequences and cues in the showfile.
+
+### grandMA3 Command Function 1️⃣:`shutdown_sequences(level)`
+```python
+def shutdown_sequences(level):
+    cues = ["23 cue 1", "23 cue 2", "23 cue 3", "23 cue 4"]
+    for cue in cues:
+        gma_client.send_message("/gma3/cmd", f"Off Sequence {cue}")
+```
+
+#### 🎯Purpose
+- **Deactivates** all cues at the end of each stage
+- Ensures lighting state is **reset** before the next round begins.
+- Prevent any unintended visual **overlapping** from previous cues
+
+#### 💡 Usage
+```python
+shutdown_sequences(current_level)
+```
+
+### grandMA3 Command Function 2️⃣: `trigger_osc(count)`
+```python
+def trigger_osc(count):
+    if current_level in milestones:
+        if count == milestones[current_level][0]:
+            gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 1")
+        elif count == milestones[current_level][1]:
+            gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 2")
+        elif count == milestones[current_level][2]:
+            gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 3")
+        elif count == milestones[current_level][3]:
+            gma_client.send_message("/gma3/cmd", "Go Sequence 23 cue 4")
+```
+
+#### 🎯Purpose
+- **Triggers** lighting cues in grandMA3 based on player's progress
+- Provides **visual feedback** at fixed percentages like 25%, 50%
+
+### grandMA3 Command Function 3️⃣: `GameUI.trigger_startup_sequence(self, event=None)`
+```python
+def trigger_startup_sequence(self, event=None):
+    self.show_game_result("Startup")
+    gma_client.send_message("/gma3/cmd", "Go Sequence 38 cue 3")
+    time.sleep(0.3)
+    gma_client.send_message("/gma3/cmd", "Go+ Sequence 41")
+    time.sleep(0.9)
+    gma_client.send_message("/gma3/cmd", "On Sequence 207")
+    startup_complete = True
+    self.show_game_result("Ready")
+```
+
+#### 🎯Purpose
+- Initates the game's lighting system by activating sequences in grandMA3
+- Provides a visual startup animation
+- Sets internal game state flags to mark startup as complete
+
+
 ## Lighting Sequence Configuration
 | Sequence |  Action            | 
 |:--------:|:------------------:|
