@@ -7,7 +7,7 @@ from pythonosc import udp_client, dispatcher, osc_server
 # OSC addresses
 GMA_IP, GMA_PORT       = "192.168.254.213", 2000
 REAPER_IP, REAPER_PORT = "192.168.254.12", 8000
-LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001
+LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8006
 
 gma_client    = udp_client.SimpleUDPClient(GMA_IP, GMA_PORT)
 reaper_client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
@@ -89,7 +89,6 @@ def shutdown_sequences(level):
     cues = ["23 cue 1", "23 cue 2", "23 cue 3", "23 cue 4"]
     for cue in cues:
         gma_client.send_message("/gma3/cmd", f"Off Sequence {cue}")
-    trigger_reaper(addr16)  # Stop
 
 # Game state
 count = 0
@@ -223,6 +222,8 @@ def print_args(addr, *args):
         return
 
     if waiting_for_next:
+        trigger_reaper(addr16)  # Pause/stop everything first
+        time.sleep(1)         # Give time to stop
         level_start_sequence(current_level)
         gma_client.send_message("/gma3/cmd", f"Level {current_level} Start")
         ui.update_level(current_level)
@@ -259,35 +260,36 @@ def print_args(addr, *args):
         light_up(lit_pixels, get_stage_color(current_level))
         trigger_osc(count)
 
+    # Win Stage - Replace this section:
     if count == level_goals[current_level]:
-        trigger_reaper(addr16)  # Stop current level audio
-        time.sleep(0.3)         # Shorter initial delay
-        
-        # Start win audio immediately in background
-        def win_stage_audio():
-            trigger_reaper(addr9)   # Jump to Marker 30
-            time.sleep(0.5)         # delay for 0.5s
-            trigger_reaper(addr15)  # Play win audio
-            time.sleep(20)          # delay for 20s
-            trigger_reaper(addr16)  # Stop win audio
-        threading.Thread(target=win_stage_audio, daemon=True).start()
-        
-        # LED animations happen while audio plays
+        trigger_reaper(addr16)  # Stop current level audio first!
+        time.sleep(0.5)
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
         gma_client.send_message("/gma3/cmd", "Win Stage")
+        
+        # ✅ NEW: Immediate background thread
+        def win_stage_audio():
+            trigger_reaper(addr9)   # Jump to Marker 30
+            time.sleep(0.5)         # Wait for jump
+            trigger_reaper(addr15)  # Play
+            time.sleep(20)          # Play for 20s
+            trigger_reaper(addr16)  # Stop
+        threading.Thread(target=win_stage_audio, daemon=True).start()
+        
+        shutdown_sequences(current_level)  # Now only handles lighting
         ui.show_stage_result("Win")
 
         if current_level == max_levels:
             gma_client.send_message("/gma3/cmd", "Go+ sequence 23")
             gma_client.send_message("/gma3/cmd", "Go sequence 33")
             
-            # Start win game audio immediately in background (same pattern as win stage)
+            # ✅ NEW: Immediate background thread for win game audio
             def win_game_audio():
                 trigger_reaper(addr11)  # Jump to Marker 32
-                time.sleep(0.5)         # delay for 0.5s
+                time.sleep(0.5)         # Wait for jump to complete
                 trigger_reaper(addr15)  # Play win game audio
-                time.sleep(20)          # delay for 20s
+                time.sleep(20)          # Let audio play for 20s
                 trigger_reaper(addr16)  # Stop win game audio
             threading.Thread(target=win_game_audio, daemon=True).start()
             
@@ -324,27 +326,27 @@ def start_game_logic():
                     red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
                     gma_client.send_message("/gma3/cmd", "Lose Stage")
                     
-                    # Start lose stage audio immediately in background
+                    # ✅ NEW: Immediate background thread for lose stage audio
                     def lose_stage_audio():
                         trigger_reaper(addr10)  # Jump to Marker 31
-                        time.sleep(0.5)         # delay for 0.5s
+                        time.sleep(0.5)         # Wait for jump to complete
                         trigger_reaper(addr15)  # Play lose stage audio
-                        time.sleep(20)          # delay for 20s
+                        time.sleep(20)          # Let audio play for 20s
                         trigger_reaper(addr16)  # Stop lose stage audio
                     threading.Thread(target=lose_stage_audio, daemon=True).start()
                     
-                    shutdown_sequences(current_level)
+                    shutdown_sequences(current_level)  # Now only handles lighting
                     ui.show_stage_result("Lose")
 
                     if stage_tries >= 3:
                         gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
                         
-                        # Start lose game audio immediately in background
+                        # ✅ NEW: Immediate background thread for lose game audio
                         def lose_game_audio():
                             trigger_reaper(addr12)  # Jump to Marker 33
-                            time.sleep(0.5)         # delay for 0.5s
+                            time.sleep(0.5)         # Wait for jump to complete
                             trigger_reaper(addr15)  # Play lose game audio
-                            time.sleep(20)          # delay for 20s
+                            time.sleep(20)          # Let audio play for 20s
                             trigger_reaper(addr16)  # Stop lose game audio
                         threading.Thread(target=lose_game_audio, daemon=True).start()
                         
@@ -355,6 +357,7 @@ def start_game_logic():
                         count = 0
                         timing_started = False
                         timeout_triggered = False
+
             time.sleep(0.01)
     except KeyboardInterrupt:
         light_up(LED_COUNT, 0)
