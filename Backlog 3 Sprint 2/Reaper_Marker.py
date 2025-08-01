@@ -1,6 +1,5 @@
 from pythonosc import udp_client
 import time
-import keyboard  # Requires: pip install keyboard
 
 def send_message(receiver_ip, receiver_port, address, message):
     try:
@@ -22,35 +21,28 @@ addr2 = "/action/1016"   # Stop
 addr3 = "/marker/21"     # Marker 34
 addr4 = "/action/41267"  # Marker 27
 
-# Step 1: Trigger addr4
+# Step 1: Trigger addr4 (Marker 27)
+print("Triggering addr4 (Marker 27)...")
 send_message(PI_A_ADDR, PORT, addr4, msg)
+send_message(PI_A_ADDR, PORT, addr1, msg)
+time.sleep(1)  # Small delay for marker jump
 
-# Step 2: Trigger addr3 and Play
+# Step 2: Trigger addr3 (Marker 34) and Play
+print("Triggering addr3 (Marker 34) and Play...")
 send_message(PI_A_ADDR, PORT, addr3, msg)
 send_message(PI_A_ADDR, PORT, addr1, msg)
 
-# Step 3: Wait for 10 spacebar presses
-print("Spacebar counter active. Press 10 times to continue...")
-space_count = 0
+# Step 3: Wait for 10 seconds then continue
+print("Waiting 10 seconds...")
+time.sleep(10)
 
-while True:
-    if keyboard.is_pressed("space"):
-        space_count += 1
-        print(f"Spacebar pressed {space_count} time(s)")
-        while keyboard.is_pressed("space"):
-            time.sleep(0.1)  # Debounce
-    if space_count >= 10:
-        break
-
-# Step 4: Trigger addr and Play again
-print("Triggering addr (Marker 21)...")
+# Step 4: Trigger addr (Marker 21) and Play
+print("Triggering addr (Marker 21) and Play...")
 send_message(PI_A_ADDR, PORT, addr, msg)
 send_message(PI_A_ADDR, PORT, addr1, msg)
 
-# Step 5: Wait and Stop
+# Step 5: Wait 5 seconds and Stop
+print("Playing for 5 seconds...")
 time.sleep(5)
-send_message(PI_A_ADDR, PORT, addr2, msg)          
-          
-
-
-
+print("Stopping playback...")
+send_message(PI_A_ADDR, PORT, addr2, msg)
