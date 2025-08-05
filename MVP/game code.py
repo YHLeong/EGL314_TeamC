@@ -133,20 +133,6 @@ def trigger_reaper_with_level_delay(marker_addr, level):
     level_delay = level_times.get(level, 30)
     trigger_reaper_with_delay(marker_addr, addr15, addr16, level_delay)
 
-def trigger_reaper_with_delay_no_stop(marker_addr, play_addr, delay=20):
-    """Jump to marker, trigger play, wait for delay - NO STOP COMMAND - runs in background"""
-    def delayed_sequence():
-        trigger_reaper(marker_addr)  # Jump to marker first
-        time.sleep(0.5)              # Small delay to ensure marker jump completes
-        trigger_reaper(play_addr)    # Trigger play
-        time.sleep(delay)            # Wait for specified delay
-    threading.Thread(target=delayed_sequence, daemon=True).start()
-
-def trigger_reaper_with_level_delay_no_stop(marker_addr, level):
-    """Trigger level start with delay matching level duration - NO STOP"""
-    level_delay = level_times.get(level, 30)
-    trigger_reaper_with_delay_no_stop(marker_addr, addr15, level_delay)
-
 #OSC Address
 addr="/action/41261"  # Marker 21
 addr1="/action/41262"  # Marker 22
