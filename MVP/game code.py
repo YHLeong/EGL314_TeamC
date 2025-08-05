@@ -250,7 +250,7 @@ def print_args(addr, *args):
         trigger_reaper(addr15)  # Start playing win stage audio
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
-        gma_client.send_message("/gma3/cmd", "Win Stage")
+        gma_client.send_message("/gma3/cmd", "Go+ sequence 33")
         shutdown_sequences(current_level)  # Now only handles lighting
         ui.show_stage_result("Win")
 
@@ -291,7 +291,7 @@ def start_game_logic():
                     stage_tries += 1
                     ui.update_tries(3 - stage_tries)
                     red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
-                    gma_client.send_message("/gma3/cmd", "Lose Stage")
+                    gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
                     trigger_reaper(addr16)              # Stop current level audio first
                     trigger_reaper(addr9)               # Jump to Marker 30
                     trigger_reaper(addr15)              # Play lose stage audio
