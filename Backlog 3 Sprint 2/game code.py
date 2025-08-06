@@ -208,6 +208,8 @@ class GameUI:
         time.sleep(0.3)
         gma_client.send_message("/gma3/cmd", "Go+ Sequence 104")
         time.sleep(0.9)
+        gma_client.send_message("/gma3/cmd", "Go Sequence 104 cue 5.2")
+        time.sleep(0.9)
         gma_client.send_message("/gma3/cmd", "On Sequence 207")
         trigger_reaper(addr13)  # Jump to Marker 34
         time.sleep(0.1)  # Small delay to ensure marker jump completes
