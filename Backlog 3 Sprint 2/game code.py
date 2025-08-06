@@ -204,9 +204,9 @@ class GameUI:
     def trigger_startup_sequence(self, event=None):
         global startup_complete
         self.show_game_result("Startup")
-        gma_client.send_message("/gma3/cmd", "Go+ Sequence 104")
+        gma_client.send_message("/gma3/cmd", "Go+ Sequence 21")
         time.sleep(0.3)
-        gma_client.send_message("/gma3/cmd", "Go+ Sequence 102")
+        gma_client.send_message("/gma3/cmd", "Go+ Sequence 104")
         time.sleep(0.9)
         gma_client.send_message("/gma3/cmd", "On Sequence 207")
         trigger_reaper(addr13)  # Jump to Marker 34
