@@ -243,7 +243,7 @@ def print_args(addr, *args):
         light_up(lit_pixels, get_stage_color(current_level))
         trigger_osc(count)
 
-    # Win Stage - Replace this section:
+    # Win Stage - Modified section:
     if count == level_goals[current_level]:
         trigger_reaper(addr16)  # Stop current level audio first!
         trigger_reaper(addr9)   # Jump to Marker 30
@@ -253,6 +253,14 @@ def print_args(addr, *args):
         gma_client.send_message("/gma3/cmd", "Go+ sequence 33")
         shutdown_sequences(current_level)  # Now only handles lighting
         ui.show_stage_result("Win")
+        
+        #Always jump back to addr14 and play after win stage
+        def return_to_base_audio():
+            time.sleep(20)              # Wait for win stage audio to finish
+            trigger_reaper(addr14)      # Jump to Marker 35
+            time.sleep(0.5)             # Wait for jump to complete
+            trigger_reaper(addr15)      # Start playing base audio
+        threading.Thread(target=return_to_base_audio, daemon=True).start()
 
         if current_level == max_levels:
             gma_client.send_message("/gma3/cmd", "Go+ sequence 23")
