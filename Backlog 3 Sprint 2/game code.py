@@ -311,7 +311,7 @@ def start_game_logic():
                     ui.show_stage_result("Lose")
 
                     if stage_tries >= 3:
-                        gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
+                        gma_client.send_message("/gma3/cmd", "Go+ sequence 106")
                         trigger_reaper_with_delay(addr12, addr15, addr16)  # Jump to marker, play, then stop after 20s
                         ui.show_game_result("Lose")
                         game_started = False
