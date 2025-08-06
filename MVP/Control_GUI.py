@@ -44,26 +44,25 @@ class AVControlGUI:  # Main class for the AV Control Panel application
             "Marker 33": "/marker/22",  # Direct marker jump to position 22
             "Marker 34": "/marker/23",  # Direct marker jump to position 23
             "Marker 35": "/marker/24",  # Direct marker jump to position 24
+            "Sit Down": "/marker/47",  # Direct marker jump to position 25
+            "are you reeady?": "/marker/48",  # Direct marker jump to position 26
             "Play": "/action/1007",  # OSC address for REAPER play command
             "Stop": "/action/1016"  # OSC address for REAPER stop command
         }
         
         # GrandMA3 Cues
         self.gma_cues = [  # List of predefined lighting cue commands for GrandMA3
-            "Go Sequence 23 cue 1",  # Trigger sequence 23, cue 1
-            "Go Sequence 23 cue 2",  # Trigger sequence 23, cue 2
-            "Go Sequence 23 cue 3",  # Trigger sequence 23, cue 3
-            "Go Sequence 23 cue 4",  # Trigger sequence 23, cue 4
-            "Go Sequence 38 cue 3",  # Trigger sequence 38, cue 3
-            "Go+ Sequence 41",  # Go forward in sequence 41
-            "On Sequence 207",  # Turn on sequence 207
-            "Off Sequence 23 cue 1",  # Turn off sequence 23, cue 1
-            "Off Sequence 23 cue 2",  # Turn off sequence 23, cue 2
-            "Off Sequence 23 cue 3",  # Turn off sequence 23, cue 3
-            "Off Sequence 23 cue 4",  # Turn off sequence 23, cue 4
-            "Go+ sequence 23",  # Go forward in sequence 23
-            "Go sequence 33",  # Go to sequence 33
-            "Go+ sequence 32"  # Go forward in sequence 32
+            "Go sequence 105 cue 1",  # Win game special lighting
+            "Go sequence 106 cue 1",  # Lose game special lighting
+            "Go sequence 104 cue 5",  # Game lighting
+            "Go sequence 104 cue 5.1",  # light flashing
+            "Go sequence 104 cue 5.2",  # Go back to normal lighting
+            "Go sequence 104 cue 6",  # During game lighting
+            "Go sequence 108 cue 1",  # Transition lighting
+            "Go sequence 83 cue 1",  # Transition lighting
+            "Go sequence 83 cue+", # Additional transition lighting command
+            "Go sequence 13 cue 1", #End Sequence
+            "Off sequence thru please"  # Turn off lighting sequence
         ]
         
         self.create_widgets()  # Call method to create all GUI widgets
@@ -343,81 +342,78 @@ Raspberry Pi 4 Model B:
   
 Available Commands:
   • REAPER: {len(self.reaper_addresses)} addresses
-  • GMA3: {len(self.gma_cues)} preset cues + custom
+  • GMA3: 2 lighting commands (win/lose game only)
         """
         
         self.status_text.delete(1.0, tk.END)
         self.status_text.insert(tk.END, status_info)
     
     # Quick Action Methods
-    def game_startup(self):
-        """Execute game startup sequence"""
-        def startup_sequence():
-            self.trigger_gma("Go Sequence 38 cue 3")
-            time.sleep(0.3)
-            self.trigger_gma("Go+ Sequence 41")
-            time.sleep(0.9)
-            self.trigger_gma("On Sequence 207")
-            self.trigger_reaper("/marker/23")  # Jump to Marker 34
-            time.sleep(0.1)
-            self.trigger_reaper("/action/1007")  # Play
-            self.log_command("GAME: Startup sequence completed")
+    def game_startup(self):  # Execute game startup sequence - audio only
+        """Execute game startup sequence"""  # Docstring describing method purpose
+        def startup_sequence():  # Inner function to execute startup in background thread
+            self.trigger_reaper("/marker/23")  # Jump to Marker 34 (addr13 in game code)
+            time.sleep(0.1)  # Small delay to ensure marker jump completes
+            self.trigger_reaper("/action/1007")  # Play audio (addr15 in game code)
+            self.log_command("GAME: Startup sequence completed")  # Log completion
         
-        threading.Thread(target=startup_sequence, daemon=True).start()
+        threading.Thread(target=startup_sequence, daemon=True).start()  # Start sequence in background daemon thread
     
-    def win_stage(self):
-        """Execute win stage sequence"""
-        def win_sequence():
-            self.trigger_reaper("/action/1016")  # Stop
-            time.sleep(0.5)
-            self.trigger_reaper("/action/41270")  # Jump to Marker 30
-            time.sleep(0.5)
-            self.trigger_reaper("/action/1007")  # Play
-            self.trigger_gma("Go+ sequence 33")
-            self.log_command("GAME: Win stage sequence")
+    def win_stage(self):  # Execute win stage sequence - audio only
+        """Execute win stage sequence"""  # Docstring describing method purpose
+        def win_sequence():  # Inner function to execute win stage in background thread
+            self.trigger_reaper("/action/1016")  # Stop current audio (addr16 in game code)
+            time.sleep(0.5)  # Wait for stop to complete
+            self.trigger_reaper("/action/41270")  # Jump to Marker 30 (addr9 in game code)
+            time.sleep(0.5)  # Wait for jump to complete
+            self.trigger_reaper("/action/1007")  # Play win stage audio (addr15 in game code)
+            self.log_command("GAME: Win stage sequence")  # Log completion
         
-        threading.Thread(target=win_sequence, daemon=True).start()
+        threading.Thread(target=win_sequence, daemon=True).start()  # Start sequence in background daemon thread
     
-    def win_game(self):
-        """Execute win game sequence"""
-        def win_sequence():
-            self.trigger_gma("Go+ sequence 23")
-            self.trigger_gma("Go sequence 33")
-            self.trigger_reaper("/marker/21")  # Jump to Marker 32
-            time.sleep(0.5)
-            self.trigger_reaper("/action/1007")  # Play
-            self.log_command("GAME: Win game sequence")
+    def win_game(self):  # Execute win game sequence with lighting
+        """Execute win game sequence"""  # Docstring describing method purpose
+        def win_sequence():  # Inner function to execute win game in background thread
+            self.gma_client.send_message("/gma3/cmd", "Go sequence 105 cue 1")  # Win game lighting
+            self.trigger_reaper("/action/1016")  # Stop current audio (addr16 in game code)
+            time.sleep(0.1)  # Brief pause
+            self.trigger_reaper("/marker/24")  # Jump to Marker 35 (addr14 in game code)
+            time.sleep(0.5)  # Wait for jump to complete
+            self.trigger_reaper("/action/1007")  # Play win game audio (addr15 in game code)
+            self.log_command("GAME: Win game sequence with lighting")  # Log completion
         
-        threading.Thread(target=win_sequence, daemon=True).start()
+        threading.Thread(target=win_sequence, daemon=True).start()  # Start sequence in background daemon thread
     
-    def lose_stage(self):
-        """Execute lose stage sequence"""
-        def lose_sequence():
-            self.trigger_reaper("/action/1016")  # Stop
-            self.trigger_reaper("/marker/20")  # Jump to Marker 31
-            time.sleep(0.5)
-            self.trigger_reaper("/action/1007")  # Play
-            self.trigger_gma("Go+ sequence 32")
-            self.log_command("GAME: Lose stage sequence")
+    def lose_stage(self):  # Execute lose stage sequence - audio only
+        """Execute lose stage sequence"""  # Docstring describing method purpose
+        def lose_sequence():  # Inner function to execute lose stage in background thread
+            self.trigger_reaper("/action/1016")  # Stop current audio (addr16 in game code)
+            time.sleep(0.1)  # Brief pause
+            self.trigger_reaper("/marker/20")  # Jump to Marker 31 (addr10 in game code)
+            time.sleep(0.5)  # Wait for jump to complete
+            self.trigger_reaper("/action/1007")  # Play lose stage audio (addr15 in game code)
+            self.log_command("GAME: Lose stage sequence")  # Log completion
         
-        threading.Thread(target=lose_sequence, daemon=True).start()
+        threading.Thread(target=lose_sequence, daemon=True).start()  # Start sequence in background daemon thread
     
-    def lose_game(self):
-        """Execute lose game sequence"""
-        def lose_sequence():
-            self.trigger_gma("Go+ sequence 32")
-            self.trigger_reaper("/marker/22")  # Jump to Marker 33
-            time.sleep(0.5)
-            self.trigger_reaper("/action/1007")  # Play
-            self.log_command("GAME: Lose game sequence")
+    def lose_game(self):  # Execute lose game sequence with lighting
+        """Execute lose game sequence"""  # Docstring describing method purpose
+        def lose_sequence():  # Inner function to execute lose game in background thread
+            self.gma_client.send_message("/gma3/cmd", "Go sequence 106 cue 1")  # Lose game lighting
+            self.trigger_reaper("/action/1016")  # Stop current audio (addr16 in game code)
+            time.sleep(0.1)  # Brief pause
+            self.trigger_reaper("/marker/22")  # Jump to Marker 33 (addr12 in game code)
+            time.sleep(0.5)  # Wait for jump to complete
+            self.trigger_reaper("/action/1007")  # Play lose game audio (addr15 in game code)
+            self.log_command("GAME: Lose game sequence with lighting")  # Log completion
         
-        threading.Thread(target=lose_sequence, daemon=True).start()
+        threading.Thread(target=lose_sequence, daemon=True).start()  # Start sequence in background daemon thread
     
-    def emergency_stop(self):
-        """Emergency stop all audio"""
-        self.trigger_reaper("/action/1016")  # Stop REAPER
-        self.log_command("EMERGENCY: All audio stopped")
-        messagebox.showwarning("Emergency Stop", "All audio has been stopped!")
+    def emergency_stop(self):  # Emergency stop - audio only
+        """Emergency stop all audio"""  # Docstring describing method purpose
+        self.trigger_reaper("/action/1016")  # Stop REAPER (addr16 in game code)
+        self.log_command("EMERGENCY: Audio stopped")  # Log emergency stop
+        messagebox.showwarning("Emergency Stop", "Audio has been stopped!")  # Show warning dialog
     
     def reset_all(self):
         """Reset to base state"""

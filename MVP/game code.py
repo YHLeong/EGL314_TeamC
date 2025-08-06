@@ -263,8 +263,7 @@ def print_args(addr, *args):
         threading.Thread(target=return_to_base_audio, daemon=True).start()
 
         if current_level == max_levels:
-            gma_client.send_message("/gma3/cmd", "Go+ sequence 23")
-            gma_client.send_message("/gma3/cmd", "Go sequence 33")
+            gma_client.send_message("/gma3/cmd", "Go sequence 103 cue 1")
             trigger_reaper(addr16)  # Stop current level audio first
             trigger_reaper(addr14)  # Jump to Marker 35
             trigger_reaper(addr15)  # Start playing win game audio
@@ -298,26 +297,14 @@ def start_game_logic():
                     timeout_triggered = True
                     stage_tries += 1
                     ui.update_tries(3 - stage_tries)
-                    red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
-                    gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
-                    trigger_reaper(addr16)              # Stop current level audio first
-                    trigger_reaper(addr9)               # Jump to Marker 30
-                    trigger_reaper(addr15)              # Play lose stage audio
-                    shutdown_sequences(current_level)   # Now only handles lighting
-                    ui.show_stage_result("Lose")
+                    # Simply reset the stage without any lose effects
+                    light_up(LED_COUNT, 0)  # Turn off all LEDs
+                    ui.show_stage_result("Timeout - Try Again")
 
-                    if stage_tries >= 3: 
-                        gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
-                        trigger_reaper(addr16)  # Stop current level audio first
-                        trigger_reaper(addr12)  # Jump to Marker 33
-                        trigger_reaper(addr15)  # Start playing lose game audio
-                        ui.show_game_result("Lose")
-                        game_started = False
-                        timing_started = False
-                    else:
-                        count = 0
-                        timing_started = False
-                        timeout_triggered = False
+                    # Players can retry indefinitely - just reset the stage
+                    count = 0
+                    timing_started = False
+                    timeout_triggered = False
 
             time.sleep(0.01)
     except KeyboardInterrupt:
