@@ -204,9 +204,11 @@ class GameUI:
     def trigger_startup_sequence(self, event=None):
         global startup_complete
         self.show_game_result("Startup")
-        gma_client.send_message("/gma3/cmd", "Go Sequence 38 cue 3")
+        gma_client.send_message("/gma3/cmd", "Go+ Sequence 21")
         time.sleep(0.3)
-        gma_client.send_message("/gma3/cmd", "Go+ Sequence 41")
+        gma_client.send_message("/gma3/cmd", "Go+ Sequence 104")
+        time.sleep(0.9)
+        gma_client.send_message("/gma3/cmd", "Go Sequence 104 cue 5.2")
         time.sleep(0.9)
         gma_client.send_message("/gma3/cmd", "On Sequence 207")
         trigger_reaper(addr13)  # Jump to Marker 34
@@ -264,7 +266,7 @@ def print_args(addr, *args):
         time.sleep(0.5)
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
-        gma_client.send_message("/gma3/cmd", "Win Stage")
+        gma_client.send_message("/gma3/cmd", "Go+ sequence 105")
         time.sleep(0.3)  # Additional delay before win audio
         trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20):  # type: ignore # Jump to marker, play, then stop after 20s
         shutdown_sequences(current_level)
@@ -272,7 +274,7 @@ def print_args(addr, *args):
 
         if current_level == max_levels:
             gma_client.send_message("/gma3/cmd", "Go+ sequence 23")
-            gma_client.send_message("/gma3/cmd", "Go sequence 33")
+            gma_client.send_message("/gma3/cmd", "Go+ sequence 105")
             trigger_reaper_with_delay(addr11, addr15, addr16)  # Jump to marker, play, then stop after 20s
             ui.show_game_result("Win")
             game_started = False
@@ -305,13 +307,13 @@ def start_game_logic():
                     stage_tries += 1
                     ui.update_tries(3 - stage_tries)
                     red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
-                    gma_client.send_message("/gma3/cmd", "Lose Stage")
+                    gma_client.send_message("/gma3/cmd", "Go+ sequence 106")
                     trigger_reaper_with_delay_no_stop(addr10, addr15, delay=20)
                     shutdown_sequences(current_level)
                     ui.show_stage_result("Lose")
 
                     if stage_tries >= 3:
-                        gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
+                        gma_client.send_message("/gma3/cmd", "Go+ sequence 106")
                         trigger_reaper_with_delay(addr12, addr15, addr16)  # Jump to marker, play, then stop after 20s
                         ui.show_game_result("Lose")
                         game_started = False
