@@ -204,9 +204,9 @@ class GameUI:
     def trigger_startup_sequence(self, event=None):
         global startup_complete
         self.show_game_result("Startup")
-        gma_client.send_message("/gma3/cmd", "Go Sequence 38 cue 3")
+        gma_client.send_message("/gma3/cmd", "Go+ Sequence 104")
         time.sleep(0.3)
-        gma_client.send_message("/gma3/cmd", "Go+ Sequence 41")
+        gma_client.send_message("/gma3/cmd", "Go+ Sequence 102")
         time.sleep(0.9)
         gma_client.send_message("/gma3/cmd", "On Sequence 207")
         trigger_reaper(addr13)  # Jump to Marker 34
@@ -264,7 +264,7 @@ def print_args(addr, *args):
         time.sleep(0.5)
         flash_bpm(LED_COUNT)
         green_dim_down(LED_COUNT)
-        gma_client.send_message("/gma3/cmd", "Win Stage")
+        gma_client.send_message("/gma3/cmd", "Go+ sequence 105")
         time.sleep(0.3)  # Additional delay before win audio
         trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20):  # type: ignore # Jump to marker, play, then stop after 20s
         shutdown_sequences(current_level)
