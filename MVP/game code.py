@@ -212,7 +212,9 @@ def print_args(addr, *args):
         ui.update_level(current_level)
         ui.update_tries(3)
         count = 0
-        timing_started = False
+        # Reset timer state and start fresh timing for new stage
+        start_time = time.time()
+        timing_started = True
         timeout_triggered = False
         stage_tries = 0
         waiting_for_next = False
@@ -245,6 +247,10 @@ def print_args(addr, *args):
 
     # Win Stage - Modified section:
     if count == level_goals[current_level]:
+        # Stop the timer immediately when stage is won
+        timing_started = False
+        timeout_triggered = False
+        
         trigger_reaper(addr16)  # Stop current level audio first!
         trigger_reaper(addr9)   # Jump to Marker 30
         trigger_reaper(addr15)  # Start playing win stage audio
