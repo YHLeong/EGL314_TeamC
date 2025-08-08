@@ -94,11 +94,8 @@ def shutdown_sequences(level):
 count = 0
 stage_tries = 0
 game_started = False
-timing_started = False
-timeout_triggered = False
 startup_complete = False
 waiting_for_next = False
-start_time = None
 current_level = 1
 max_levels = 4
 
@@ -109,9 +106,6 @@ milestones = {
     4: [60, 120, 180, 240]
 }
 level_goals = {1: 40, 2: 80, 3: 120, 4: 240}
-level_times = {1: 30, 2: 40, 3: 50, 4: 60}
-
-def get_level_time(level): return level_times.get(level, 30)
 
 def trigger_reaper(addr, msg=1.0):
     """Send OSC message to Reaper with the specified address and message"""
@@ -129,9 +123,10 @@ def trigger_reaper_with_delay(marker_addr, play_addr, stop_addr, delay=20):
     threading.Thread(target=delayed_sequence, daemon=True).start()
 
 def trigger_reaper_with_level_delay(marker_addr, level):
-    """Trigger level start with delay matching level duration"""
-    level_delay = level_times.get(level, 30)
-    trigger_reaper_with_delay(marker_addr, addr15, addr16, level_delay)
+    """Trigger level start with no delay - just start immediately"""
+    trigger_reaper(marker_addr)  # Jump to marker
+    time.sleep(0.5)             # Small delay to ensure marker jump completes
+    trigger_reaper(addr15)      # Trigger play
 
 #OSC Address
 addr="/action/41261"  # Marker 21
@@ -144,9 +139,7 @@ addr6="/action/41267"  # Marker 27
 addr7="/action/41268"  # Marker 28
 addr8="/action/41269"  # Marker 29
 addr9="/action/41270"  # Marker 30
-addr10="/marker/20"  # Marker 31
 addr11="/marker/21"  # Marker 32
-addr12="/marker/22"  # Marker 33
 addr13="/marker/23"  # Marker 34
 addr14="/marker/24"  # Marker 35
 addr15="/action/1007"  # Play
@@ -172,13 +165,11 @@ class GameUI:
 
         font_large = ("Arial", 28)
         self.level_label = tk.Label(self.root, text="Level: 1", font=font_large); self.level_label.pack(pady=10)
-        self.time_label = tk.Label(self.root, text="Remaining Time: 30s", font=font_large); self.time_label.pack(pady=10)
         self.stage_result = tk.Label(self.root, text="Stage: In Progress", font=font_large, fg="blue"); self.stage_result.pack(pady=10)
         self.game_result = tk.Label(self.root, text="Game: Waiting", font=font_large, fg="gray"); self.game_result.pack(pady=10)
         self.tries_label = tk.Label(self.root, text="Tries Left: 3", font=font_large); self.tries_label.pack(pady=10)
 
     def update_level(self, level): self.root.after(0, lambda: self.level_label.config(text=f"Level: {level}"))
-    def update_time(self, time_left): self.root.after(0, lambda: self.time_label.config(text=f"Remaining Time: {int(time_left)}s"))
     def update_tries(self, tries): self.root.after(0, lambda: self.tries_label.config(text=f"Tries Left: {tries}"))
     def show_stage_result(self, result): color = "green" if result == "Win" else "red"; self.root.after(0, lambda: self.stage_result.config(text=f"Stage: {result}", fg=color))
     def show_game_result(self, result): color = {"Win": "green", "Lose": "red", "Startup": "orange", "Ready": "blue", "Waiting": "gray"}.get(result, "gray"); self.root.after(0, lambda: self.game_result.config(text=f"Game: {result}", fg=color))
@@ -198,8 +189,7 @@ class GameUI:
         self.show_game_result("Ready")
 
 def print_args(addr, *args):
-    global count, game_started, timing_started, start_time
-    global timeout_triggered, current_level, stage_tries, waiting_for_next
+    global count, game_started, current_level, stage_tries, waiting_for_next
 
     if not startup_complete:
         return
@@ -212,10 +202,6 @@ def print_args(addr, *args):
         ui.update_level(current_level)
         ui.update_tries(3)
         count = 0
-        # Reset timer state and start fresh timing for new stage
-        start_time = time.time()
-        timing_started = True
-        timeout_triggered = False
         stage_tries = 0
         waiting_for_next = False
         return
@@ -226,17 +212,6 @@ def print_args(addr, *args):
         gma_client.send_message("/gma3/cmd", "Level Start")
         ui.update_level(current_level)
         ui.update_tries(3)
-        # Don't return here - continue to start timing
-        start_time = time.time()
-        timing_started = True
-        return
-
-    if not timing_started:
-        start_time = time.time()
-        timing_started = True
-        return
-
-    if timeout_triggered or not timing_started:
         return
 
     count += 1
@@ -247,10 +222,6 @@ def print_args(addr, *args):
 
     # Win Stage - Modified section:
     if count == level_goals[current_level]:
-        # Stop the timer immediately when stage is won
-        timing_started = False
-        timeout_triggered = False
-        
         trigger_reaper(addr16)  # Stop current level audio first!
         trigger_reaper(addr9)   # Jump to Marker 30
         trigger_reaper(addr15)  # Start playing win stage audio
@@ -259,23 +230,14 @@ def print_args(addr, *args):
         gma_client.send_message("/gma3/cmd", "Go+ sequence 33")
         shutdown_sequences(current_level)  # Now only handles lighting
         ui.show_stage_result("Win")
-        
-        #Always jump back to addr14 and play after win stage
-        def return_to_base_audio():
-            time.sleep(20)              # Wait for win stage audio to finish
-            trigger_reaper(addr14)      # Jump to Marker 35
-            time.sleep(0.5)             # Wait for jump to complete
-            trigger_reaper(addr15)      # Start playing base audio
-        threading.Thread(target=return_to_base_audio, daemon=True).start()
 
         if current_level == max_levels:
-            gma_client.send_message("/gma3/cmd", "Go sequence 103 cue 1")
+            gma_client.send_message("/gma3/cmd", "Go sequence 105 cue 1")
             trigger_reaper(addr16)  # Stop current level audio first
-            trigger_reaper(addr14)  # Jump to Marker 35
+            trigger_reaper(addr11)  # Jump to Marker 32
             trigger_reaper(addr15)  # Start playing win game audio
             ui.show_game_result("Win")
             game_started = False
-            timing_started = False
             return
 
         current_level += 1
@@ -285,8 +247,7 @@ def print_args(addr, *args):
         return
 
 def start_game_logic():
-    global timing_started, timeout_triggered, start_time, current_level
-    global stage_tries, game_started, count
+    global current_level, stage_tries, game_started, count
     osc_dispatcher = dispatcher.Dispatcher()
     osc_dispatcher.map("/print", print_args)
     osc_server_thread = osc_server.ThreadingOSCUDPServer((LOCAL_IP, LOCAL_PORT), osc_dispatcher)
@@ -295,24 +256,8 @@ def start_game_logic():
 
     try:
         while True:
-            if timing_started and not timeout_triggered:
-                time_left = get_level_time(current_level) - (time.time() - start_time)
-                ui.update_time(max(0, time_left))
-
-                if time.time() - start_time > get_level_time(current_level) and count < level_goals[current_level]:
-                    timeout_triggered = True
-                    stage_tries += 1
-                    ui.update_tries(3 - stage_tries)
-                    # Simply reset the stage without any lose effects
-                    light_up(LED_COUNT, 0)  # Turn off all LEDs
-                    ui.show_stage_result("Timeout - Try Again")
-
-                    # Players can retry indefinitely - just reset the stage
-                    count = 0
-                    timing_started = False
-                    timeout_triggered = False
-
-            time.sleep(0.01)
+            # Game runs without timer - only sensor input controls progression
+            time.sleep(0.1)  # Small sleep to prevent excessive CPU usage
     except KeyboardInterrupt:
         light_up(LED_COUNT, 0)
         osc_server_thread.shutdown()
