@@ -106,6 +106,9 @@ milestones = {
     4: [60, 120, 180, 240]
 }
 level_goals = {1: 40, 2: 80, 3: 120, 4: 240}
+level_times = {1: 30, 2: 40, 3: 50, 4: 60}
+
+def get_level_time(level): return level_times.get(level, 30)
 
 def trigger_reaper(addr, msg=1.0):
     """Send OSC message to Reaper with the specified address and message"""
@@ -139,7 +142,9 @@ addr6="/action/41267"  # Marker 27
 addr7="/action/41268"  # Marker 28
 addr8="/action/41269"  # Marker 29
 addr9="/action/41270"  # Marker 30
+addr10="/marker/20"  # Marker 31
 addr11="/marker/21"  # Marker 32
+addr12="/marker/22"  # Marker 33
 addr13="/marker/23"  # Marker 34
 addr14="/marker/24"  # Marker 35
 addr15="/action/1007"  # Play
@@ -165,11 +170,13 @@ class GameUI:
 
         font_large = ("Arial", 28)
         self.level_label = tk.Label(self.root, text="Level: 1", font=font_large); self.level_label.pack(pady=10)
+        self.time_label = tk.Label(self.root, text="Remaining Time: 30s", font=font_large); self.time_label.pack(pady=10)
         self.stage_result = tk.Label(self.root, text="Stage: In Progress", font=font_large, fg="blue"); self.stage_result.pack(pady=10)
         self.game_result = tk.Label(self.root, text="Game: Waiting", font=font_large, fg="gray"); self.game_result.pack(pady=10)
         self.tries_label = tk.Label(self.root, text="Tries Left: 3", font=font_large); self.tries_label.pack(pady=10)
 
     def update_level(self, level): self.root.after(0, lambda: self.level_label.config(text=f"Level: {level}"))
+    def update_time(self, time_left): self.root.after(0, lambda: self.time_label.config(text=f"Remaining Time: {int(time_left)}s"))
     def update_tries(self, tries): self.root.after(0, lambda: self.tries_label.config(text=f"Tries Left: {tries}"))
     def show_stage_result(self, result): color = "green" if result == "Win" else "red"; self.root.after(0, lambda: self.stage_result.config(text=f"Stage: {result}", fg=color))
     def show_game_result(self, result): color = {"Win": "green", "Lose": "red", "Startup": "orange", "Ready": "blue", "Waiting": "gray"}.get(result, "gray"); self.root.after(0, lambda: self.game_result.config(text=f"Game: {result}", fg=color))
@@ -247,7 +254,8 @@ def print_args(addr, *args):
         return
 
 def start_game_logic():
-    global current_level, stage_tries, game_started, count
+    global timing_started, timeout_triggered, start_time, current_level
+    global stage_tries, game_started, count
     osc_dispatcher = dispatcher.Dispatcher()
     osc_dispatcher.map("/print", print_args)
     osc_server_thread = osc_server.ThreadingOSCUDPServer((LOCAL_IP, LOCAL_PORT), osc_dispatcher)
@@ -256,8 +264,35 @@ def start_game_logic():
 
     try:
         while True:
-            # Game runs without timer - only sensor input controls progression
-            time.sleep(0.1)  # Small sleep to prevent excessive CPU usage
+            if timing_started and not timeout_triggered:
+                time_left = get_level_time(current_level) - (time.time() - start_time)
+                ui.update_time(max(0, time_left))
+
+                if time.time() - start_time > get_level_time(current_level) and count < level_goals[current_level]:
+                    timeout_triggered = True
+                    stage_tries += 1
+                    ui.update_tries(3 - stage_tries)
+                    red_dim_down(min(LED_COUNT, int(LED_COUNT * (count / level_goals[current_level]))))
+                    gma_client.send_message("/gma3/cmd", "Lose Stage")
+                    trigger_reaper(addr16)  # Stop current level audio first
+                    trigger_reaper(addr10)  # Jump to Marker 31
+                    trigger_reaper(addr15)  # Start playing lose stage audio
+                    shutdown_sequences(current_level)
+                    ui.show_stage_result("Lose")
+
+                    if stage_tries >= 3:
+                        gma_client.send_message("/gma3/cmd", "Go+ sequence 32")
+                        trigger_reaper(addr16)  # Stop current level audio first
+                        trigger_reaper(addr12)  # Jump to Marker 33
+                        trigger_reaper(addr15)  # Start playing lose stage audio
+                        ui.show_game_result("Lose")
+                        game_started = False
+                        timing_started = False
+                    else:
+                        count = 0
+                        timing_started = False
+                        timeout_triggered = False
+            time.sleep(0.01)
     except KeyboardInterrupt:
         light_up(LED_COUNT, 0)
         osc_server_thread.shutdown()
