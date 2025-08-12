@@ -94,8 +94,11 @@ def shutdown_sequences(level):
 count = 0
 stage_tries = 0
 game_started = False
+timing_started = False
+timeout_triggered = False
 startup_complete = False
 waiting_for_next = False
+start_time = None
 current_level = 1
 max_levels = 4
 
@@ -196,7 +199,8 @@ class GameUI:
         self.show_game_result("Ready")
 
 def print_args(addr, *args):
-    global count, game_started, current_level, stage_tries, waiting_for_next
+    global count, game_started, timing_started, start_time
+    global timeout_triggered, current_level, stage_tries, waiting_for_next
 
     if not startup_complete:
         return
@@ -209,6 +213,10 @@ def print_args(addr, *args):
         ui.update_level(current_level)
         ui.update_tries(3)
         count = 0
+        # Reset timer state and start fresh timing for new stage
+        start_time = time.time()
+        timing_started = True
+        timeout_triggered = False
         stage_tries = 0
         waiting_for_next = False
         return
@@ -219,6 +227,13 @@ def print_args(addr, *args):
         gma_client.send_message("/gma3/cmd", "Level Start")
         ui.update_level(current_level)
         ui.update_tries(3)
+        # Start timing when game begins
+        start_time = time.time()
+        timing_started = True
+        timeout_triggered = False
+        return
+
+    if timeout_triggered or not timing_started:
         return
 
     count += 1

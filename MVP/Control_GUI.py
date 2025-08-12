@@ -55,7 +55,7 @@ class AVControlGUI:
             "Light Flashing": "Go sequence 104 cue 5.1",
             "Normal Lighting": "Go sequence 104 cue 5.2",
             "During Game Lighting": "Go sequence 104 cue 6",
-            "Transition Effect": "Go sequence 108 cue 1",
+            "Transition Effect": "Release sequence 83; Go sequence 108 cue 1",
             "End Transition": "Go sequence 83 cue 1",
             "End buttons": "Go sequence 83 cue+",
             "End Sequence": "Go sequence 13 cue 1",
