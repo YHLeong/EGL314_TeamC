@@ -198,7 +198,23 @@ class AVControlGUI:
     def _divider(self, parent, height=2, pad=(0, 8), neon="neon"):
         color = self.COLORS[neon] if neon in self.COLORS else self.COLORS["neon"]
         div = tk.Frame(parent, bg=color, height=height)
-        div.pack(fill=tk.X, padx=pad[0], pady=pad[1])
+        # Use the same geometry manager the parent is already using
+        try:
+            uses_grid = bool(parent.grid_slaves())
+        except Exception:
+            uses_grid = False
+
+        if uses_grid:
+            # Place divider on next available row, spanning all columns
+            cols, rows = parent.grid_size()
+            cols = max(1, cols)
+            try:
+                parent.grid_columnconfigure(0, weight=1)
+            except Exception:
+                pass
+            div.grid(row=rows, column=0, columnspan=cols, sticky="ew", padx=pad[0], pady=pad[1])
+        else:
+            div.pack(fill=tk.X, padx=pad[0], pady=pad[1])
 
     # ---------- Subsections ----------
     def _transport_controls(self, parent):
@@ -486,8 +502,11 @@ class AVControlGUI:
         self.bg_canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self.root.bind("<Configure>", self._redraw_starfield)
 
-        # Send canvas to back
-        self.bg_canvas.lower()
+        # Send canvas to back (Canvas.lower lowers items, not the widget)
+        try:
+            self.bg_canvas.tk.call("lower", self.bg_canvas._w)
+        except Exception:
+            pass
 
         self.stars = []
         self._redraw_starfield()  # initial draw
@@ -518,7 +537,7 @@ class AVControlGUI:
                 self.bg_canvas.itemconfig(oid, fill=color)
         self.root.after(350, self._twinkle)
 
-    staticmethod
+    @staticmethod
     def _hex_with_alpha(hex_color, alpha_0_255):
         # Tkinter doesn't support alpha; we fake it with close shades (kept for stylistic variety)
         # Return the base hex; varying between neon/neon2 gives a twinkle illusion

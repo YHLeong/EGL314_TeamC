@@ -193,7 +193,7 @@ class GameUI:
         time.sleep(0.9)
         gma_client.send_message("/gma3/cmd", "On Sequence 207")
         trigger_reaper(addr13)  # Jump to Marker 34
-        time.sleep(0.1)  # Small delay to ensure marker jump completes
+        time.sleep(0.1)         # Small delay to ensure marker jump completes
         trigger_reaper(addr15)  # Start playing
         startup_complete = True
         self.show_game_result("Ready")
@@ -207,7 +207,7 @@ def print_args(addr, *args):
 
     if waiting_for_next:
         trigger_reaper(addr16)  # Pause/stop everything first
-        time.sleep(1)         # Give time to stop
+        time.sleep(1)           # Give time to stop
         level_start_sequence(current_level)
         gma_client.send_message("/gma3/cmd", f"Level {current_level} Start")
         ui.update_level(current_level)

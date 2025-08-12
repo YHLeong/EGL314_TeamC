@@ -1,43 +1,38 @@
-# 🎮 EGL314 – Project Documentation
+# Overview
 
 ## 📂 Table of Contents
 - [Introduction](#-introduction)
-- [Objective](#️-objective)
+- [Objective](#-objective)
 - [Dependencies](#-dependencies)
-    - [Hardware](#️-hardware)
+    - [Hardware](#-hardware)
     - [Software](#-software)
 - [Physical connections and Props](#physical-connections-and-props)
 - [System Diagram](#-system-diagram)
 - [Code Logic](#-code-logic)
 - [Random Number Generator](#-random-number-generator---click-here)
-    - [Python Packages Used](#-python-packages-used)
-- [Prove Of Concept](#prove-of-concept---click-hereinsert-link-here)
-- [GPIO Setup](#-gpio-setup)
-- [GUI Layout](#️-gui-layout)
-- [Game Flow](#-game-flow)
-- [Sequence Generation](#sequence-generation)
-- [Displaying Sequence](#️-displaying-sequence)
-- [Sensor Monitoring](#-sensor-monitoring)
-- [Sequence Validation](#️-sequence-validation)
-- [Countdown Timer](#️-countdown-timer)
-- [Stage Logic](#-stage-logic)
-- [MVP Stage](#mvp-stage---click-here)
-- [Network Setup](#-network-setup)
-- [REAPER Functions](#-reaper-audio-control-functions---developed-by-yu-hang)
-    - [Core Function](#-core-function-trigger_reaperaddr-msg10)
-    - [Advanced Function](#️-advanced-function-trigger_reaper_with_delay)
-    - [Level-Specific Function](#-level-specific-function-trigger_reaper_with_level_delay)
-    - [No-Stop Variant](#-no-stop-variant-trigger_reaper_with_delay_no_stop)
-    - [Level Specific No-Stop](#-level-specific-no-stop-trigger_reaper_with_level_delay_no_stop)
-    - [Integration with Game Flow](#-integration-with-game-flow)
-    - [Error Prevention Features](#️-error-prevention-features)
+- [Prove of Concept](#prove-of-concept)
+    - [GPIO Setup](#gpio-setup)
+    - [GUI Layout](#gui-layout)
+    - [Game Flow](#game-flow)
+    - [Sequence Generation](#sequence-generation)
+    - [Displaying Sequence](#displaying-sequence)
+    - [Sensor Monitoring](#sensor-monitoring)
+    - [Sequence Validation](#sequence-validation)
+    - [Countdown Timer](#countdown-timer)
+    - [Threaded Execution](#threaded-execution)
+    - [Stage Logic](#stage-logic)
+    - [GUI Main Loop & Cleanup](#gui-main-loop--cleanup)
+    - [Graceful Exit](#graceful-exit)
+- [MVP](#mvp)
+    - [MVP Stage](#mvp-stage---click-here)
+- [REAPER Audio Control Functions (MVP)](#-reaper-audio-control-functions---developed-by-yu-hang)
 - [REAPER Marker Configuration](#reaper-marker-configuration)
-- [Lighting Control with grandMA3 (via OSC)](#summary)
+- [Lighting Control with grandMA3 (via OSC)](#lighting-control-with-grandma3-via-osc)
     - [Core Command Example](#-core-command-example)
-    - [grandMA3 Command Function 1️⃣](#grandma3-command-function-1️⃣shutdown_sequenceslevel)
-    - [grandMA3 Command Function 2️⃣](#grandma3-command-function-2️⃣-trigger_osccount)
-    - [grandMA3 Command Function 3️⃣](#grandma3-command-function-3️⃣-gameuitrigger_startup_sequenceself-eventnone)
 - [Lighting Sequence Configuration](#lighting-sequence-configuration)
+- [Final](#final)
+    - [Final Build — Network Setup](#final-build--network-setup)
+    - [Final Build — REAPER Audio Control Functions](#final-build--reaper-audio-control-functions)
 
 
 
@@ -203,7 +198,9 @@ except KeyboardInterrupt:
 
 
 
-## Prove Of Concept - [Click Here]()insert link here
+# Prove of Concept
+
+Prove Of Concept - [Click Here]() insert link here
 ### 🧾 Overview
 
 This Python script implements a **progressive memory game** using a **Raspberry Pi** and **Tkinter GUI**. Players must memorize and replicate sequences shown on screen by pressing corresponding physical buttons connected via **GPIO pins**. The game consists of **multiple stages** with increasing sequence lengths, categorized into **Easy, Medium, and Hard** difficulty levels.
@@ -426,7 +423,9 @@ finally:
 - Required for hardware stability and avoiding pin lockups after crash or forced quit.
 - ---
 
-## MVP Stage - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%203%20Sprint%202/game%20code.py)
+## MVP
+
+### MVP Stage - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%203%20Sprint%202/game%20code.py)
 ### 🧾 Overview
 
 This Python script implements an **interactive light-up game** using a **Raspberry Pi 4** with **WS281x LED strips**, **OSC communication**, and **Tkinter GUI**. Players must reach specific milestones by activating sensors while lights progressively fill up. The game integrates with **REAPER audio software** and **GrandMA3 lighting console** for immersive audio-visual feedback across **4 progressive difficulty levels**.
@@ -802,3 +801,86 @@ def trigger_startup_sequence(self, event=None):
 |   105        | Win game           | 
 |   104 cue 4  | Lights during game |
 |   104 cue 5  | Players lights     | 
+
+---
+
+## Final 
+
+```python
+GMA_IP, GMA_PORT       = "192.168.254.213", 2000  # GrandMA3 Console
+REAPER_IP, REAPER_PORT = "192.168.254.12",   8000 # REAPER Audio
+LOCAL_IP, LOCAL_PORT   = "192.168.254.108",  8006 # OSC listener (Pi)
+
+gma    = udp_client.SimpleUDPClient(GMA_IP, GMA_PORT)
+reaper = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+```
+
+- GrandMA3: Receives lighting commands at `/gma3/cmd`
+- REAPER: Receives action/marker commands at `/action/...` or `/marker/...`
+- Local OSC: Listens on `LOCAL_IP:LOCAL_PORT` for sensor events on `/print`
+
+---
+
+## Final Build — REAPER Audio Control Functions
+
+### Overview
+Audio control uses a debounced wrapper to prevent rapid duplicate triggers, plus direct marker calls for stage/game events. This mirrors MVP but adds cooldown and transport-prepare actions.
+
+### Debounced Action Sender: `trigger_reaper(marker: str)`
+
+```python
+MARKER_COOLDOWN = 0.6      # seconds
+last_marker_time = {}      # marker -> last time sent
+
+def trigger_reaper(marker: str):
+    """Debounced wrapper to fire a REAPER action only once per cooldown window."""
+    now = time.time()
+    if marker in last_marker_time and (now - last_marker_time[marker]) < MARKER_COOLDOWN:
+        return
+    last_marker_time[marker] = now
+    reaper.send_message("/action/40044", 1.0)   # optional: prepare/jump mode
+    reaper.send_message(f"/action/{marker}", 1.0)
+    reaper.send_message("/action/40045", 1.0)   # optional: resume/confirm
+```
+
+#### Purpose
+- Prevents duplicate REAPER actions if a sensor bounces.
+- Wraps action calls with optional pre/post actions (`40044/40045`) for safer transport behavior.
+
+#### Usage Examples
+```python
+trigger_reaper("41261")  # Load Sound 1
+trigger_reaper("41270")  # Win Stage
+```
+
+### Direct Marker Triggers (events)
+Final build uses direct `/marker/...` for some events (no debounce):
+
+```python
+reaper.send_message("/marker/18", 1.0)  # Stage Fail
+reaper.send_message("/marker/19", 1.0)  # Game Win
+reaper.send_message("/marker/20", 1.0)  # Game Lose
+```
+
+### Milestone Integration: `trigger_osc(n)`
+
+```python
+def trigger_osc(n):
+    # Maps four milestones per level to GMA cues and REAPER actions 41261..41264
+    # Ensures each milestone audio is fired once per level
+```
+
+#### Purpose
+- Couples player progress to both lighting cues and REAPER audio per milestone.
+- Guarantees each milestone triggers once using an in-level `played_milestones` set.
+
+### Game Startup (manual)
+
+```python
+def start_sequence(...):
+    gma.send_message("/gma3/cmd", "Go Sequence 102 cue 5")
+    ...
+    trigger_reaper("41100")  # Startup audio
+```
+
+---
