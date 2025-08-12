@@ -795,11 +795,10 @@ def trigger_startup_sequence(self, event=None):
 - Sets internal game state flags to mark startup as complete
 
 ## Lighting Sequence Configuration
-| Sequence |  Action            | 
-|:--------:|:------------------:|
-|    23    | Charging lights    | 
-|    32    | Lose game          | 
-|    33    | Win game           | 
-|    36    | Lights during game |
-|    38    | Players lights     | 
-|    41    | Start game         |
+| Sequence/Cue |  Action            | 
+|:------------:|:------------------:|
+|   23         | Charging lights    | 
+|   106        | Lose game          | 
+|   105        | Win game           | 
+|   104 cue 4  | Lights during game |
+|   104 cue 5  | Players lights     | 
