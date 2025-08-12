@@ -473,15 +473,15 @@ LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001  # Game Controller
 - **REAPER**: Receives audio marker triggers and playback control
 - **Local**: Listens for sensor input via OSC messages
 
-## 🎵 REAPER Audio Control Functions - *Developed by Yu Hang*
+### 🎵 REAPER Audio Control Functions - *Developed by Yu Hang*
 
-### 🧾 Overview
+#### 🧾 Overview
 
 These Python functions provide a **comprehensive OSC-based interface** for controlling **REAPER audio software** from the Raspberry Pi game controller. The system handles **marker navigation**, **audio playback control**, and **automated timing sequences** for seamless audio-visual synchronization across different game stages and events.
 
 ---
 
-### 🌐 Network Configuration
+#### 🌐 Network Configuration
 ```python
 REAPER_IP, REAPER_PORT = "192.168.254.12", 8000  # REAPER Audio Workstation
 ```
@@ -491,7 +491,7 @@ REAPER_IP, REAPER_PORT = "192.168.254.12", 8000  # REAPER Audio Workstation
 
 ---
 
-### 🎵 Core Function: `trigger_reaper(addr, msg=1.0)`
+#### 🎵 Core Function: `trigger_reaper(addr, msg=1.0)`
 
 ```python
 def trigger_reaper(addr, msg=1.0):
@@ -500,16 +500,16 @@ def trigger_reaper(addr, msg=1.0):
     client.send_message(addr, msg)
 ```
 
-#### 🎯 Purpose
+##### 🎯 Purpose
 - **Single OSC command** sender to REAPER
 - **Immediate execution** without delays or threading
 - **Foundation function** used by all other audio control functions
 
-#### 📥 Parameters
+##### 📥 Parameters
 - **`addr`**: OSC address string (e.g., `"/action/41261"`, `"/marker/20"`)
 - **`msg`**: Message value (default: `1.0` for trigger commands)
 
-#### 🔧 Usage Examples
+##### 🔧 Usage Examples
 ```python
 trigger_reaper("/action/41270")  # Jump to Marker 30
 trigger_reaper("/action/1007")   # Start playback
@@ -518,7 +518,7 @@ trigger_reaper("/action/1016")   # Stop playback
 
 ---
 
-### ⏱️ Advanced Function: `trigger_reaper_with_delay()`
+#### ⏱️ Advanced Function: `trigger_reaper_with_delay()`
 
 ```python
 def trigger_reaper_with_delay(marker_addr, play_addr, stop_addr, delay=20):
@@ -533,32 +533,32 @@ def trigger_reaper_with_delay(marker_addr, play_addr, stop_addr, delay=20):
     threading.Thread(target=delayed_sequence, daemon=True).start()
 ```
 
-#### 🎯 Purpose
+##### 🎯 Purpose
 - **Complete audio sequence** management: Jump → Play → Stop
 - **Non-blocking execution** using background threads
 - **Automated timing** for fixed-duration audio clips
 
-#### 📥 Parameters
+##### 📥 Parameters
 - **`marker_addr`**: OSC address for marker jump (e.g., `addr9` = Marker 30)
 - **`play_addr`**: OSC address for play command (always `addr15` = `/action/1007`)
 - **`stop_addr`**: OSC address for stop command (always `addr16` = `/action/1016`)
 - **`delay`**: Duration in seconds before auto-stop (default: 20 seconds)
 
-#### 🔄 Sequence Flow
+##### 🔄 Sequence Flow
 1. **Jump to marker** → Positions playhead at specific timeline location
 2. **Wait 0.5s** → Ensures marker jump completes before next command
 3. **Start playback** → Audio begins from marker position
 4. **Wait (delay)** → Audio plays for specified duration
 5. **Stop playback** → Automatic cleanup after timer expires
 
-#### 🧵 Threading Benefits
+##### 🧵 Threading Benefits
 - **Game continues** while audio plays in background
 - **Sensor input** remains responsive during audio sequences
 - **UI updates** not blocked by audio timing
 
 ---
 
-### 🎮 Level-Specific Function: `trigger_reaper_with_level_delay()`
+#### 🎮 Level-Specific Function: `trigger_reaper_with_level_delay()`
 
 ```python
 def trigger_reaper_with_level_delay(marker_addr, level):
@@ -567,16 +567,16 @@ def trigger_reaper_with_level_delay(marker_addr, level):
     trigger_reaper_with_delay(marker_addr, addr15, addr16, level_delay)
 ```
 
-#### 🎯 Purpose
+##### 🎯 Purpose
 - **Level-specific audio** with dynamic timing
 - **Progressive difficulty** through varied audio durations
 - **Wrapper function** that calculates appropriate delay based on level
 
-#### 📥 Parameters
+##### 📥 Parameters
 - **`marker_addr`**: Marker for level start audio (addr6/addr7/addr8)
 - **`level`**: Current game level (1-4)
 
-#### ⏱️ Level Timing Mapping
+##### ⏱️ Level Timing Mapping
 ```python
 level_times = {1: 30, 2: 40, 3: 50, 4: 60}
 ```
@@ -585,7 +585,7 @@ level_times = {1: 30, 2: 40, 3: 50, 4: 60}
 - **Level 3**: 50-second audio duration
 - **Level 4**: 60-second audio duration
 
-#### 🔧 Usage Example
+##### 🔧 Usage Example
 ```python
 trigger_reaper_with_level_delay(addr6, 1)  # Level 1: 30s audio at Marker 27
 trigger_reaper_with_level_delay(addr7, 3)  # Level 3: 50s audio at Marker 28
@@ -593,7 +593,7 @@ trigger_reaper_with_level_delay(addr7, 3)  # Level 3: 50s audio at Marker 28
 
 ---
 
-### 🎵 No-Stop Variant: `trigger_reaper_with_delay_no_stop()`
+#### 🎵 No-Stop Variant: `trigger_reaper_with_delay_no_stop()`
 
 ```python
 def trigger_reaper_with_delay_no_stop(marker_addr, play_addr, delay=20):
@@ -608,17 +608,17 @@ def trigger_reaper_with_delay_no_stop(marker_addr, play_addr, delay=20):
     threading.Thread(target=delayed_sequence, daemon=True).start()
 ```
 
-#### 🎯 Purpose
+##### 🎯 Purpose
 - **Manual stop control** for complex audio scenarios
 - **Prevents double-stop** commands that cause REAPER confusion
 - **Deferred cleanup** handled by `shutdown_sequences()` function
 
-#### ❌ Key Difference
+##### ❌ Key Difference
 - **No automatic stop** after delay expires
 - **External management** required for audio cleanup
 - **Prevents conflicts** with multiple stop commands in rapid succession
 
-#### 🔧 Usage Scenario
+##### 🔧 Usage Scenario
 ```python
 # Win stage audio - let shutdown_sequences handle stopping
 trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20)
@@ -627,7 +627,7 @@ shutdown_sequences(current_level)  # This handles the stop command
 
 ---
 
-### 🎮 Level-Specific No-Stop: `trigger_reaper_with_level_delay_no_stop()`
+#### 🎮 Level-Specific No-Stop: `trigger_reaper_with_level_delay_no_stop()`
 
 ```python
 def trigger_reaper_with_level_delay_no_stop(marker_addr, level):
@@ -636,21 +636,21 @@ def trigger_reaper_with_level_delay_no_stop(marker_addr, level):
     trigger_reaper_with_delay_no_stop(marker_addr, addr15, level_delay)
 ```
 
-#### 🎯 Purpose
+##### 🎯 Purpose
 - **Level audio** without automatic stop commands
 - **Clean transition** between game stages
 - **Single stop point** managed by `shutdown_sequences()`
 
-#### 🔧 Benefits
+##### 🔧 Benefits
 - **Eliminates transport confusion** caused by multiple rapid stop commands
 - **Smoother audio transitions** between levels
 - **Centralized cleanup** through shutdown function
 
 ---
 
-### 📡 OSC Address Mapping
+#### 📡 OSC Address Mapping
 
-#### 🎵 Audio Categories
+##### 🎵 Audio Categories
 - **Progress Sounds**: Markers 21-26 for milestone feedback
 - **Level Audio**: Markers 27-29 for stage-specific background music
 - **Event Audio**: Markers 30-35 for win/lose/game state sounds
@@ -658,26 +658,26 @@ def trigger_reaper_with_level_delay_no_stop(marker_addr, level):
 
 ---
 
-### 🎮 Integration with Game Flow
+#### 🎮 Integration with Game Flow
 
-#### 🚀 Game Startup
+##### 🚀 Game Startup
 ```python
 trigger_reaper(addr13)  # Jump to BGM (Marker 34)
 trigger_reaper(addr15)  # Start playing background music
 ```
 
-#### 🎯 Level Start
+##### 🎯 Level Start
 ```python
 trigger_reaper_with_level_delay(addr6, 1)  # Level 1 with 30s duration
 ```
 
-#### 🏆 Win Condition
+##### 🏆 Win Condition
 ```python
 trigger_reaper_with_delay_no_stop(addr9, addr15, delay=20)  # Win audio
 shutdown_sequences(current_level)  # Clean stop
 ```
 
-#### 💀 Lose Condition
+##### 💀 Lose Condition
 ```python
 trigger_reaper_with_delay_no_stop(addr10, addr15, delay=20)  # Lose audio
 shutdown_sequences(current_level)  # Clean stop
@@ -685,19 +685,19 @@ shutdown_sequences(current_level)  # Clean stop
 
 ---
 
-### 🛡️ Error Prevention Features
+#### 🛡️ Error Prevention Features
 
-#### 🚫 Double-Stop Prevention
+##### 🚫 Double-Stop Prevention
 - **No-stop variants** prevent multiple stop commands in rapid succession
 - **Centralized cleanup** through `shutdown_sequences()` function
 - **Transport stability** maintained during complex audio transitions
 
-#### ⏱️ Timing Synchronization
+##### ⏱️ Timing Synchronization
 - **0.5-second delays** ensure marker jumps complete before play commands
 - **Level-specific durations** match gameplay timing requirements
 - **Background threading** prevents audio timing from blocking game logic
 
-#### 🔄 Graceful Degradation
+##### 🔄 Graceful Degradation
 - **Default values** provided for missing level configurations
 - **Daemon threads** automatically clean up on program exit
 - **Exception handling** maintains system stability during network issues
