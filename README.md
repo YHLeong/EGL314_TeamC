@@ -1,38 +1,10 @@
 # Overview
 
 ## 📂 Table of Contents
-- [Introduction](#-introduction)
-- [Objective](#-objective)
-- [Dependencies](#-dependencies)
-    - [Hardware](#-hardware)
-    - [Software](#-software)
-- [Physical connections and Props](#physical-connections-and-props)
-- [System Diagram](#-system-diagram)
-- [Code Logic](#-code-logic)
-- [Random Number Generator](#-random-number-generator---click-here)
+- [Overview](#overview)
 - [Prove of Concept](#prove-of-concept)
-    - [GPIO Setup](#gpio-setup)
-    - [GUI Layout](#gui-layout)
-    - [Game Flow](#game-flow)
-    - [Sequence Generation](#sequence-generation)
-    - [Displaying Sequence](#displaying-sequence)
-    - [Sensor Monitoring](#sensor-monitoring)
-    - [Sequence Validation](#sequence-validation)
-    - [Countdown Timer](#countdown-timer)
-    - [Threaded Execution](#threaded-execution)
-    - [Stage Logic](#stage-logic)
-    - [GUI Main Loop & Cleanup](#gui-main-loop--cleanup)
-    - [Graceful Exit](#graceful-exit)
 - [MVP](#mvp)
-    - [MVP Stage](#mvp-stage---click-here)
-- [REAPER Audio Control Functions (MVP)](#-reaper-audio-control-functions---developed-by-yu-hang)
-- [REAPER Marker Configuration](#reaper-marker-configuration)
-- [Lighting Control with grandMA3 (via OSC)](#lighting-control-with-grandma3-via-osc)
-    - [Core Command Example](#-core-command-example)
-- [Lighting Sequence Configuration](#lighting-sequence-configuration)
 - [Final](#final)
-    - [Final Build — Network Setup](#final-build--network-setup)
-    - [Final Build — REAPER Audio Control Functions](#final-build--reaper-audio-control-functions)
 
 
 
@@ -200,7 +172,7 @@ except KeyboardInterrupt:
 
 # Prove of Concept
 
-Prove Of Concept - [Click Here]() insert link here
+Prove of Concept - [Click Here](./POC/)
 ### 🧾 Overview
 
 This Python script implements a **progressive memory game** using a **Raspberry Pi** and **Tkinter GUI**. Players must memorize and replicate sequences shown on screen by pressing corresponding physical buttons connected via **GPIO pins**. The game consists of **multiple stages** with increasing sequence lengths, categorized into **Easy, Medium, and Hard** difficulty levels.
@@ -423,16 +395,18 @@ finally:
 - Required for hardware stability and avoiding pin lockups after crash or forced quit.
 - ---
 
-## MVP
+# MVP
 
-### MVP Stage - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%203%20Sprint%202/game%20code.py)
+## MVP - [Click Here](./MVP/)
+
+## MVP Stage - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%203%20Sprint%202/game%20code.py)
 ### 🧾 Overview
 
 This Python script implements an **interactive light-up game** using a **Raspberry Pi 4** with **WS281x LED strips**, **OSC communication**, and **Tkinter GUI**. Players must reach specific milestones by activating sensors while lights progressively fill up. The game integrates with **REAPER audio software** and **GrandMA3 lighting console** for immersive audio-visual feedback across **4 progressive difficulty levels**.
 
 ---
 
-### 📚 Python Packages Used
+## 📚 Python Packages Used
 ```python
 import time
 import threading
@@ -463,7 +437,7 @@ from pythonosc import udp_client, dispatcher, osc_server
 
 ---
 
-### 🌐 Network Setup
+## 🌐 Network Setup
 ```python
 GMA_IP, GMA_PORT       = "192.168.254.213", 2000  # GrandMA3 Console
 REAPER_IP, REAPER_PORT = "192.168.254.12", 8000   # REAPER Audio
@@ -473,7 +447,7 @@ LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001  # Game Controller
 - **REAPER**: Receives audio marker triggers and playback control
 - **Local**: Listens for sensor input via OSC messages
 
-### 🎵 REAPER Audio Control Functions - *Developed by Yu Hang*
+## 🎵 REAPER Audio Control Functions - *Developed by Yu Hang*
 
 #### 🧾 Overview
 
@@ -804,7 +778,17 @@ def trigger_startup_sequence(self, event=None):
 
 ---
 
-## Final 
+# Final
+
+### Final - [Click Here](./Final/)
+
+### 🧾 Overview
+The Final build consolidates the game into a stable release with:
+- Debounced REAPER action triggering and direct marker events
+- Refined milestone → lighting/audio mapping
+- Manual UI controls for lighting and audio
+- Clear network endpoints for GrandMA3, REAPER, and the local OSC listener
+
 
 ```python
 GMA_IP, GMA_PORT       = "192.168.254.213", 2000  # GrandMA3 Console
