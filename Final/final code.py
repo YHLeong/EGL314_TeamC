@@ -166,19 +166,42 @@ def trigger_osc(n):
         trigger_reaper("41264")
         # Stage Win audio plays ONLY at stage complete (below)
 
+def trigger_reaper(addr, msg=1.0):
+    """Send OSC message to Reaper with the specified address and message"""
+    client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+    client.send_message(addr, msg)
+
 # -------- Manual Controls Data --------
 audio_cmds = {
-    "Startup Audio":  "41100",
+    "Startup Audio":  "/marker/23",
     "Level 1 Audio":  "41261",
     "Level 2 Audio":  "41262",
     "Level 3 Audio":  "41263",
     "Level 4 Audio":  "41264",
     "Stage Win":      "41270",
-    "Stage Fail":     "18",
-    "Game Win":       "19",
-    "Game Lose":      "20",
+    "Stage Fail":     "/marker/20",
+    "Game Win":       "/marker/21",
+    "Game Lose":      "/marker/22",
     "Shutdown Audio": None
 }
+
+addr="/action/41261"  # Marker 21
+addr1="/action/41262"  # Marker 22
+addr2="/action/41263"  # Marker 23
+addr3="/action/41264"  # Marker 24
+addr4="/action/41265"  # Marker 25
+addr5="/action/41266"  # Marker 26
+addr6="/action/41267"  # Marker 27
+addr7="/action/41268"  # Marker 28
+addr8="/action/41269"  # Marker 29
+addr9="/action/41270"  # Marker 30
+addr10="/marker/20"  # Marker 31
+addr11="/marker/21"  # Marker 32
+addr12="/marker/22"  # Marker 33
+addr13="/marker/23"  # Marker 34
+addr14="/marker/24"  # Marker 35
+addr15="/action/1007"  # Play
+addr16="/action/1016"  # Stop
 
 cues_map = {
     102: ["5"],
@@ -205,33 +228,7 @@ class GameUI:
         for lbl in self.labels.values():
             lbl.pack(pady=5)
 
-        # -- Manual Lighting Controls --
-        lighting_frame = tk.LabelFrame(self.root, text="Manual Lighting Controls",
-                                       font=("Arial", 16))
-        lighting_frame.pack(fill="x", padx=10, pady=5)
-        for seq in (102, 103, 104):
-            seq_frame = tk.LabelFrame(lighting_frame, text=f"Seq {seq}", padx=5, pady=5)
-            seq_frame.pack(side="left", padx=10)
-            tk.Button(seq_frame,
-                      text=f"Go+ Seq {seq}",
-                      command=lambda s=seq: self.send_gma_go_plus(s),
-                      width=12).pack(pady=2)
-            for cue in cues_map[seq]:
-                tk.Button(seq_frame,
-                          text=f"Cue {cue}",
-                          command=lambda s=seq, c=cue: self.send_gma_cue(s, c),
-                          width=12).pack(pady=2)
-
-        # -- Manual Audio Controls --
-        audio_frame = tk.LabelFrame(self.root, text="Manual Audio Controls",
-                                    font=("Arial", 16))
-        audio_frame.pack(fill="x", padx=10, pady=5)
-        for label, marker in audio_cmds.items():
-            btn = tk.Button(audio_frame,
-                            text=label,
-                            width=14,
-                            command=lambda l=label, m=marker: self.send_audio_cmd(l, m))
-            btn.pack(side="left", padx=5, pady=4)
+    # ...existing code...
 
     def update(self, key, value, color=None):
         if key in self.labels:
@@ -247,7 +244,9 @@ class GameUI:
         gma.send_message("/gma3/cmd", "Go+ Sequence 102")
         time.sleep(0.2)
         gma.send_message("/gma3/cmd", "Go+ Sequence 102")
-        trigger_reaper("41100")
+        trigger_reaper(addr16)
+        trigger_reaper(addr13)
+        trigger_reaper(addr15)
         ready = True
         self.update("game", "Ready", "blue")
 
@@ -329,7 +328,9 @@ def print_args(addr, *args):
         flash_bpm(LED_COUNT)               # green pulse x3 (duration-limited)
         green_dim(LED_COUNT)               # green sweep
         gma.send_message("/gma3/cmd", "Win Stage")
-        trigger_reaper("41270")            # single win audio here
+        trigger_reaper(addr16)             # Lose audio
+        trigger_reaper(addr9)              # Stage Win audio
+        trigger_reaper(addr15)             # Play audio          
         gma.send_message("/gma3/cmd", "Go+ sequence 33")   # follow-up lighting
         shutdown_sequences()
         ui.update("result", "Stage: Win", "green")
@@ -342,7 +343,9 @@ def print_args(addr, *args):
 
         if level == MAX_LEVEL:
             gma.send_message("/gma3/cmd", "Go Sequence 103 cue 1")
-            reaper.send_message("/marker/19", 1.0)
+            trigger_reaper(addr16)             # Lose audio
+            trigger_reaper(addr11)             # Stage Win audio
+            trigger_reaper(addr15)             # Play audio 
             light_up(LED_COUNT, Color(0, 255, 0))
             time.sleep(2)
             light_up(LED_COUNT, 0)
@@ -378,7 +381,9 @@ def start_game_logic():
                     # stage fail lighting & audio
                     red_dim(LED_COUNT)
                     gma.send_message("/gma3/cmd", "Lose Stage")
-                    reaper.send_message("/marker/18", 1.0)
+                    trigger_reaper(addr16)             # Stop audio
+                    trigger_reaper(addr10)             # Stage lose audio
+                    trigger_reaper(addr15)             # Play audio 
                     ui.update("result", "Stage: Fail", "red")
 
                     tries += 1
@@ -386,7 +391,9 @@ def start_game_logic():
                         # game lose sequence
                         gma.send_message("/gma3/cmd", "Go+ sequence 32")  # follow-up lighting
                         gma.send_message("/gma3/cmd", "Go Sequence 104 cue 1")
-                        reaper.send_message("/marker/20", 1.0)
+                        trigger_reaper(addr16)             # Stop audio
+                        trigger_reaper(addr12)             # Game Lose audio
+                        trigger_reaper(addr15)             # Play audio 
                         light_up(LED_COUNT, Color(255, 0, 0))
                         time.sleep(2)
                         light_up(LED_COUNT, 0)

@@ -405,7 +405,6 @@ class AVControlGUI:
         def sequence():
             try:
                 self.trigger_reaper(address)
-                time.sleep(0.5)
                 self.trigger_reaper("/action/1007")
                 self.log_command(f"SEQUENCE {name} → Jump + Play")
             except Exception as e:
@@ -436,7 +435,6 @@ class AVControlGUI:
     def game_startup(self):
         def startup_sequence():
             self.trigger_reaper("/marker/23")
-            time.sleep(0.1)
             self.trigger_reaper("/action/1007")
             self.log_command("GAME    Startup sequence completed")
         threading.Thread(target=startup_sequence, daemon=True).start()
@@ -444,9 +442,7 @@ class AVControlGUI:
     def win_stage(self):
         def win_sequence():
             self.trigger_reaper("/action/1016")
-            time.sleep(0.5)
             self.trigger_reaper("/action/41270")
-            time.sleep(0.5)
             self.trigger_reaper("/action/1007")
             self.log_command("GAME    Win stage sequence")
         threading.Thread(target=win_sequence, daemon=True).start()
@@ -455,9 +451,7 @@ class AVControlGUI:
         def win_sequence():
             self.gma_client.send_message("/gma3/cmd", "Go sequence 105 cue 1")
             self.trigger_reaper("/action/1016")
-            time.sleep(0.1)
             self.trigger_reaper("/marker/24")
-            time.sleep(0.5)
             self.trigger_reaper("/action/1007")
             self.log_command("GAME    Win game sequence with lighting")
         threading.Thread(target=win_sequence, daemon=True).start()
@@ -466,9 +460,7 @@ class AVControlGUI:
         def static_flash_sequence():
             self.gma_client.send_message("/gma3/cmd", "Go sequence 104 cue 5.1")
             self.trigger_reaper("/action/1016")
-            time.sleep(0.1)
             self.trigger_reaper("/marker/24")
-            time.sleep(0.5)
             self.trigger_reaper("/action/1007")
             self.log_command("GAME    Static audio + light flash sequence")
         threading.Thread(target=static_flash_sequence, daemon=True).start()
@@ -482,9 +474,7 @@ class AVControlGUI:
     def reset_all(self):
         def reset_sequence():
             self.trigger_reaper("/action/1016")
-            time.sleep(0.5)
             self.trigger_reaper("/marker/24")
-            time.sleep(0.5)
             self.trigger_reaper("/action/1007")
             self.log_command("SYSTEM  Reset to base state")
         threading.Thread(target=reset_sequence, daemon=True).start()
