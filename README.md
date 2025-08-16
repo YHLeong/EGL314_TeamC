@@ -762,6 +762,23 @@ def trigger_startup_sequence(self, event=None):
     self.show_game_result("Ready")
 ```
 
+#### GUI to manually trigger lighting sequences
+
+### Which Command Sends grandMA3 Lighting When GUI Buttons Are Pressed
+- Each lighting button in the GUI runs the following function when clicked:
+```python
+def trigger_gma(self, command):
+    self.gma_client.send_message("/gma3/cmd", command)
+```
+- This function sends a **single** OSC command to grandMA3 using the /gma3/cmd address.
+
+### Trigger Flow
+- Button label in GUI → **"Game Start Lighting"**
+- Mapped command → **"Go sequence 104 cue 5"**
+- Trigger on click:
+```python
+self.gma_client.send_message("/gma3/cmd", "Go sequence 104 cue 5")
+```
 #### 🎯Purpose
 - Initates the game's lighting system by activating sequences in grandMA3
 - Provides a visual startup animation
@@ -775,6 +792,17 @@ def trigger_startup_sequence(self, event=None):
 |   105        | Win game           | 
 |   104 cue 4  | Lights during game |
 |   104 cue 5  | Players lights     | 
+
+## Light Manual trigger Configuration
+| GUI Button   |  Command Sent to grandMA3                                | 
+|:------------:|:--------------------------------------------------------:|
+|   Game Start Lighting   | Go sequence 104 cue 5                         | 
+|   Light Flashing        | Go sequence 104 cue 5.1                       | 
+|   During Game Lighting  | Go sequence 104 cue 6                         | 
+|   Win Game Lighting     | Go sequence 105 cue 1                         |
+|   Lose Game Lighting    | Go sequence 106 cue 1                         | 
+|   Transition Effect     | Release sequence 83; Go sequence 108 cue 1    | 
+|   Turn Off All Lights   | Off sequence thru please                      | 
 
 ---
 
