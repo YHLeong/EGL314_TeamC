@@ -1,7 +1,16 @@
-# Overview
+
+# EGL314 (Media Solutioning Project 1)
 
 ## 📂 Table of Contents
-- [Overview](#overview)
+- [Introduction](#introduction)
+- [Objective](#objective)
+- [Dependencies](#dependencies)
+    - [Hardware](#hardware)
+    - [Software](#software)
+- [Physical Connections and Props](#physical-connections-and-props)
+- [System Diagram](#system-diagram)
+- [Code Logic](#code-logic)
+    - [Random Number Generator](#random-number-generator)
 - [Prove of Concept](#prove-of-concept)
 - [MVP](#mvp)
 - [Final](#final)
@@ -9,13 +18,15 @@
 
 
 
-## 🎯 Introduction
+---
+
+# Introduction
 
 **Galactic Charge-Up** is an immersive, non-verbal multiplayer game designed for **1 to 3 players**. The objective is to **step on pressure sensors** to charge all 4 battery before **time runs out**. 🤐✨
 
 ---
 
-## 🕹️ Objective
+# Objective
 
 Players will:
 - Work together to charge all 4 batteries
@@ -24,9 +35,9 @@ Players will:
 
 ---
 
-## 🔌 Dependencies
+# Dependencies
 
-### 🛠️ Hardware
+## Hardware
 -  1x Raspberry Pi 4 Model B  
 -  6x OEM Pressure Sensors 
 -  1x Neopixel (300 pixels) 
@@ -39,15 +50,15 @@ Players will:
 -  2x Holders for board
 -  1x cardboard box to house electronics
 
-### 💻 Software
+## Software
 -  OSC for Reaper and GrandMA3
 -  Sensor Signal Detector
 -  Timer
 -  GUI
+  
 ---
 
-
-## Physical connections and Props
+# Physical Connections and Props
 
 Cabling
 - 2x LAN cable
@@ -83,21 +94,25 @@ Photos for reference:
 
 
 
-## 🧭 System Diagram
+---
+
+# System Diagram
 ![System Diagram](AssetsFolder/SystemDiagram_Updated.png)
 
 ---
 
-## 💡 Code Logic
+---
 
-## 🎲 Random Number Generator - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%202%20sprint%201/RandomNumberGenerator_v4.py)
+# Code Logic
+
+## Random Number Generator - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%202%20sprint%201/RandomNumberGenerator_v4.py)
 #### 🧾 Overview
 
 This Python script continuously generates and prints sequences of random integers. Each sequence has a length that cycles through **4**, **8**, and **12**, refreshing every **1 second** until the user stops the script with **Ctrl+C**.
 
 ---
 
-### 📚 Python Packages Used
+#### 📚 Python Packages Used
 ```
 import random
 import time
@@ -112,7 +127,7 @@ Purpose: Provides time-related functions.
 <br>
 Function Used: time.sleep(seconds) pauses program execution for the given number of seconds.
 
-### 🔄Index Tracker
+#### 🔄Index Tracker
 
 ```
 sequence_lengths = [4, 8, 12]
@@ -121,7 +136,7 @@ current_index = 0  # Start at 4
 - Tracks the current position in the sequence_lengths list.
 - Initially set to 0, meaning the sequence will start with a length of 4.
 
-### 🔁Main Loop
+#### 🔁Main Loop
 ```
 while True:
   ...
@@ -129,7 +144,7 @@ while True:
 - An infinite loop (while True) is used to continuously generate sequences.
 - The loop continues until the user stops it manually (e.g., with Ctrl+C).
 
-### 🧮Sequence Generation
+#### 🧮Sequence Generation
 ```
 seq_length = sequence_lengths[current_index]
 sequence = [random.randint(1, 6) for _ in range(seq_length)]
@@ -138,27 +153,27 @@ sequence = [random.randint(1, 6) for _ in range(seq_length)]
 - Generates a list of random integers between 1 and 6 (inclusive), simulating dice rolls.
 - Uses list comprehension for concise generation.
 
-### 📤Output
+#### 📤Output
 ```
 print(f"Generated sequence ({seq_length} numbers): {sequence}")
 ```
 - Prints the generated sequence along with the number of elements.
 
-### ➕Index Update
+#### ➕Index Update
 ```
 current_index = (current_index + 1) % len(sequence_lengths)
 ```
 - Updates current_index to point to the next length in the list.
 - Uses modulo (%) to cycle back to the start when the end is reached.
 
-### ⏳Delay
+#### ⏳Delay
 ```
 time.sleep(1)
 ```
 - Waits for 1 second before generating the next sequence.
 - Helps maintain a steady interval between outputs.
 
-### ✋Graceful Exit
+#### ✋Graceful Exit
 ```
 except KeyboardInterrupt:
     print("\nExiting... Program stopped by user.")
@@ -167,13 +182,16 @@ except KeyboardInterrupt:
 - Catches the KeyboardInterrupt exception and prints a message before exiting.
 ---
 
+<br>
+<br>
 
 
+---
 
 # Prove of Concept
 
 Prove of Concept - [Click Here](./POC/)
-### 🧾 Overview
+#### 🧾 Overview
 
 This Python script implements a **progressive memory game** using a **Raspberry Pi** and **Tkinter GUI**. Players must memorize and replicate sequences shown on screen by pressing corresponding physical buttons connected via **GPIO pins**. The game consists of **multiple stages** with increasing sequence lengths, categorized into **Easy, Medium, and Hard** difficulty levels.
 
@@ -181,7 +199,7 @@ This Python script implements a **progressive memory game** using a **Raspberry 
 
 ---
 
-### 📚 Python Packages Used
+#### 📚 Python Packages Used
 ```
 import RPi.GPIO as GPIO             
 import tkinter as tk                
@@ -395,11 +413,14 @@ finally:
 - Required for hardware stability and avoiding pin lockups after crash or forced quit.
 - ---
 
-# MVP
+<br>
+<br>
 
-## MVP - [Click Here](./MVP/)
 
-## MVP Stage - [Click Here](https://github.com/YHLeong/EGL314_TeamC/blob/main/Backlog%203%20Sprint%202/game%20code.py)
+---
+
+# MVP - [Click Here](./MVP/)
+
 ### 🧾 Overview
 
 This Python script implements an **interactive light-up game** using a **Raspberry Pi 4** with **WS281x LED strips**, **OSC communication**, and **Tkinter GUI**. Players must reach specific milestones by activating sensors while lights progressively fill up. The game integrates with **REAPER audio software** and **GrandMA3 lighting console** for immersive audio-visual feedback across **4 progressive difficulty levels**.
@@ -806,7 +827,10 @@ self.gma_client.send_message("/gma3/cmd", "Go sequence 104 cue 5")
 
 ---
 
-# Final
+
+---
+
+# Final - [Click Here](./Final/)
 
 ### Final - [Click Here](./Final/)
 
