@@ -49,7 +49,7 @@ All of the cues below can be triggered directly from the **`GUI.py`** file.
   `trigger_gma("Go sequence 83 cue 1")`
 
 * **Cue 2 – Button Focus**
-  Concentrated lighting highlighting the button to draw audience attention.
+  Concentrated lighting highlighting the button to draw the audience's attention.
 
   **Trigger Command:**
   `trigger_gma("Go sequence 83 cue+")`
