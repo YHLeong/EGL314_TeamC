@@ -4,6 +4,8 @@ import tkinter as tk
 from rpi_ws281x import Adafruit_NeoPixel, Color
 from pythonosc import udp_client, dispatcher, osc_server
 
+# By Ye Shuchang
+
 # -------- OSC Setup --------
 GMA_IP, GMA_PORT       = "192.168.254.213", 2000
 REAPER_IP, REAPER_PORT = "192.168.254.12",   8000
@@ -96,8 +98,7 @@ played_milestones = set()  # milestones triggered this level
 last_marker_time = {}      # marker -> last time sent
 MARKER_COOLDOWN = 0.6      # seconds
 
-# ---- GrandMA milestone command map (NEW) ----
-# One command per milestone (4 per level). Customize freely.
+# ---- GrandMA milestone command map (unchanged) ----
 gma_milestone_cmds = {
     1: ["Go Sequence 23 cue 1",
         "Go Sequence 23 cue 2",
@@ -117,6 +118,53 @@ gma_milestone_cmds = {
         "Go Sequence 23 cue 4"],
 }
 
+# -------- AUDIO / REAPER ADDRESSES --------
+# Load sounds 1–6 (actions)
+addr   = "/action/41261"  # Load sound 1
+addr1  = "/action/41262"  # Load sound 2
+addr2  = "/action/41263"  # Load sound 3
+addr3  = "/action/41264"  # Load sound 4
+addr4  = "/action/41265"  # Load sound 5
+addr5  = "/action/41266"  # Load sound 6
+
+# Level starts (actions) — used for "stage armed" SFX
+addr6  = "/action/41267"  # Stage 1 armed SFX
+addr7  = "/action/41268"  # Stage 2 armed SFX
+addr8  = "/action/41269"  # Stage 3/4 armed SFX
+
+# Stage/game outcomes (actions/markers)
+addr9  = "/marker/19"     # Marker 19 — Stage Win SFX
+addr10 = "/marker/20"     # Marker 20 — Stage Lose
+addr11 = "/marker/21"     # Marker 21 — Game Win (present and used)
+addr12 = "/marker/22"     # Marker 22 — Game Lose
+addr13 = "/marker/23"     # Marker 23 — BGM Start (loop)
+addr14 = "/marker/24"     # Marker 24 — Static
+
+# Transport
+addr15 = "/action/1007"   # Play
+addr16 = "/action/1016"   # Stop
+
+# Optional: manual controls mapping (UI)
+audio_cmds = {
+    "Startup Audio":  addr13,   # BGM Start
+    "Level 1 Audio":  addr,     # Load sound 1
+    "Level 2 Audio":  addr1,    # Load sound 2
+    "Level 3 Audio":  addr2,    # Load sound 3
+    "Level 4 Audio":  addr3,    # Load sound 4
+    "Stage Win":      addr9,    # 41270
+    "Stage Fail":     addr10,   # marker/20
+    "Game Win":       addr11,   # marker/21
+    "Game Lose":      addr12,   # marker/22
+    "Static":         addr14,   # marker/24
+    "Shutdown Audio": None,     # handled by shutdown_sequences()
+}
+
+cues_map = {
+    102: ["5"],
+    103: ["1", "2", "3", "4", "5", "5.1", "5.2", "6"],
+    104: ["1"]
+}
+
 # -------- OSC Helper Functions --------
 def get_stage_color(lvl):
     return {
@@ -126,18 +174,42 @@ def get_stage_color(lvl):
         4: Color(0,   255, 0)
     }.get(lvl, Color(255, 255, 255))
 
-def trigger_reaper(marker: str):
-    """Debounced wrapper to fire a REAPER action only once per cooldown window."""
-    now = time.time()
-    if marker in last_marker_time and (now - last_marker_time[marker]) < MARKER_COOLDOWN:
-        return
-    last_marker_time[marker] = now
-    reaper.send_message("/action/40044", 1.0)
-    reaper.send_message(f"/action/{marker}", 1.0)
-    reaper.send_message("/action/40045", 1.0)
+# Single, consistent trigger that expects a FULL OSC address (e.g., "/action/41261")
+def trigger_reaper(addr, msg=1.0):
+    client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+    client.send_message(addr, msg)
+
+# ---- BGM resume helper (non-blocking) ----
+bgm_timer = None
+def play_sfx_then_bgm(sfx_addr, sfx_hold=1.2):
+    """
+    Play a short SFX (milestone), then jump back to looping BGM.
+    Uses a timer so it doesn't block the game loop.
+    """
+    global bgm_timer
+    # Start SFX: Stop -> SFX -> Play
+    trigger_reaper(addr16)
+    trigger_reaper(sfx_addr)
+    trigger_reaper(addr15)
+
+    # Cancel any previous scheduled return to BGM
+    if bgm_timer is not None and bgm_timer.is_alive():
+        bgm_timer.cancel()
+
+    def _back_to_bgm():
+        trigger_reaper(addr16)
+        trigger_reaper(addr13)   # BGM Start marker (loop)
+        trigger_reaper(addr15)
+
+    bgm_timer = threading.Timer(sfx_hold, _back_to_bgm)
+    bgm_timer.daemon = True
+    bgm_timer.start()
+
+# Optional: set different SFX holds per milestone index (1..4)
+SFX_HOLDS = {1: 1.2, 2: 1.2, 3: 1.2, 4: 1.2}
 
 def trigger_osc(n):
-    """Fire milestone GrandMA cmd + audio ONCE per milestone per level (four total)."""
+    """Fire milestone GrandMA cmd + milestone SFX, then resume BGM (audio-only)."""
     global played_milestones, level
     cues = milestones.get(level, [])
     if not cues or n in played_milestones:
@@ -146,68 +218,24 @@ def trigger_osc(n):
 
     # Which milestone index is this? (0..3)
     try:
-        idx = cues.index(n)
+        idx = cues.index(n)  # 0-based
     except ValueError:
         return
 
-    # --- GrandMA command for this milestone (NEW) ---
+    # --- GrandMA command for this milestone (unchanged) ---
     cmds = gma_milestone_cmds.get(level, [])
     if idx < len(cmds):
         gma.send_message("/gma3/cmd", cmds[idx])
 
-    # --- Audio marker (unchanged) ---
+    # --- Audio: play milestone SFX, then auto-resume BGM ---
     if idx == 0:
-        trigger_reaper("41261")
+        play_sfx_then_bgm(addr,  SFX_HOLDS.get(1, 1.2))
     elif idx == 1:
-        trigger_reaper("41262")
+        play_sfx_then_bgm(addr1, SFX_HOLDS.get(2, 1.2))
     elif idx == 2:
-        trigger_reaper("41263")
+        play_sfx_then_bgm(addr2, SFX_HOLDS.get(3, 1.2))
     elif idx == 3:
-        trigger_reaper("41264")
-        # Stage Win audio plays ONLY at stage complete (below)
-
-def trigger_reaper(addr, msg=1.0):
-    """Send OSC message to Reaper with the specified address and message"""
-    client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
-    client.send_message(addr, msg)
-
-# -------- Manual Controls Data --------
-audio_cmds = {
-    "Startup Audio":  "/marker/23",
-    "Level 1 Audio":  "41261",
-    "Level 2 Audio":  "41262",
-    "Level 3 Audio":  "41263",
-    "Level 4 Audio":  "41264",
-    "Stage Win":      "41270",
-    "Stage Fail":     "/marker/20",
-    "Game Win":       "/marker/21",
-    "Game Lose":      "/marker/22",
-    "Shutdown Audio": None
-}
-
-addr="/action/41261"  # Marker 21
-addr1="/action/41262"  # Marker 22
-addr2="/action/41263"  # Marker 23
-addr3="/action/41264"  # Marker 24
-addr4="/action/41265"  # Marker 25
-addr5="/action/41266"  # Marker 26
-addr6="/action/41267"  # Marker 27
-addr7="/action/41268"  # Marker 28
-addr8="/action/41269"  # Marker 29
-addr9="/action/41270"  # Marker 30
-addr10="/marker/20"  # Marker 31
-addr11="/marker/21"  # Marker 32
-addr12="/marker/22"  # Marker 33
-addr13="/marker/23"  # Marker 34
-addr14="/marker/24"  # Marker 35
-addr15="/action/1007"  # Play
-addr16="/action/1016"  # Stop
-
-cues_map = {
-    102: ["5"],
-    103: ["1", "2", "3", "4", "5", "5.1", "5.2", "6"],
-    104: ["1"]
-}
+        play_sfx_then_bgm(addr3, SFX_HOLDS.get(4, 1.2))
 
 # -------- UI Class --------
 class GameUI:
@@ -244,9 +272,10 @@ class GameUI:
         gma.send_message("/gma3/cmd", "Go+ Sequence 102")
         time.sleep(0.2)
         gma.send_message("/gma3/cmd", "Go+ Sequence 102")
-        trigger_reaper(addr16)
-        trigger_reaper(addr13)
-        trigger_reaper(addr15)
+        # Transport: Stop -> BGM -> Play
+        trigger_reaper(addr16)   # Stop
+        trigger_reaper(addr13)   # BGM Start (loop marker)
+        trigger_reaper(addr15)   # Play
         ready = True
         self.update("game", "Ready", "blue")
 
@@ -259,19 +288,17 @@ class GameUI:
         gma.send_message("/gma3/cmd", f"Go Sequence {seq} cue {cue}")
         self.update("game", f"Sent Seq {seq} cue {cue}", "purple")
 
-    # audio triggers
-    def send_audio_cmd(self, label, marker):
-        if label == "Shutdown Audio":
+    # audio triggers (UI helper)
+    def send_audio_cmd(self, label, address):
+        if label == "Shutdown Audio" or address is None:
             shutdown_sequences()
-        elif label in ("Stage Fail", "Game Win", "Game Lose"):
-            reaper.send_message(f"/marker/{marker}", 1.0)
         else:
-            trigger_reaper(marker)
+            trigger_reaper(address)
         self.update("game", f"Audio: {label}", "purple")
 
 # -------- OSC Handler --------
-def print_args(addr, *args):
-    global count, started, timing, start_time, timeout, level, tries, waiting, played_milestones
+def print_args(addr_incoming, *args):
+    global count, started, timing, start_time, timeout, level, tries, waiting, played_milestones, ready
 
     if not ready:
         return
@@ -291,6 +318,19 @@ def print_args(addr, *args):
         waiting = False
         ui.update("time", "Time: Paused")
         ui.update("game", "Stage armed: press sensor again to start", "orange")
+
+        # ---------------- Stage ARMED audio per level: SFX + Play (no Stop) ----------------
+        if level == 1:
+            trigger_reaper(addr6)   # /action/41267
+            trigger_reaper(addr15)  # /action/1007
+        elif level == 2:
+            trigger_reaper(addr7)   # /action/41268
+            trigger_reaper(addr15)  # /action/1007
+        elif level in (3, 4):
+            trigger_reaper(addr8)   # /action/41269
+            trigger_reaper(addr15)  # /action/1007
+        # -------------------------------------------------------------------------------
+
         return
 
     # First ever press to start the game
@@ -303,6 +343,13 @@ def print_args(addr, *args):
         ui.update("tries", "Tries Left: 3")
         ui.update("time", "Time: Paused")
         ui.update("game", "Stage armed: press sensor again to start", "orange")
+
+        # ---------------- Initial Stage 1 ARMED audio: SFX + Play (no Stop) -------------
+        if level == 1:
+            trigger_reaper(addr6)   # /action/41267
+            trigger_reaper(addr15)  # /action/1007
+        # -------------------------------------------------------------------------------
+
         return
 
     # Start the countdown on the next press after arming
@@ -328,9 +375,11 @@ def print_args(addr, *args):
         flash_bpm(LED_COUNT)               # green pulse x3 (duration-limited)
         green_dim(LED_COUNT)               # green sweep
         gma.send_message("/gma3/cmd", "Win Stage")
-        trigger_reaper(addr16)             # Lose audio
-        trigger_reaper(addr9)              # Stage Win audio
-        trigger_reaper(addr15)             # Play audio          
+
+        # --- Stage Win audio AFTER green wipe: 41270 + Play (no Stop) ---
+        trigger_reaper(addr9)              # /action/41270
+        trigger_reaper(addr15)             # /action/1007
+
         gma.send_message("/gma3/cmd", "Go+ sequence 33")   # follow-up lighting
         shutdown_sequences()
         ui.update("result", "Stage: Win", "green")
@@ -342,10 +391,11 @@ def print_args(addr, *args):
         ui.update("time", "Time: Paused")
 
         if level == MAX_LEVEL:
+            # --- Game Win audio remains present ---
             gma.send_message("/gma3/cmd", "Go Sequence 103 cue 1")
-            trigger_reaper(addr16)             # Lose audio
-            trigger_reaper(addr11)             # Stage Win audio
-            trigger_reaper(addr15)             # Play audio 
+            trigger_reaper(addr16)             # Stop (transport)
+            trigger_reaper(addr11)             # /marker/21 — Game Win
+            trigger_reaper(addr15)             # Play
             light_up(LED_COUNT, Color(0, 255, 0))
             time.sleep(2)
             light_up(LED_COUNT, 0)
@@ -381,9 +431,10 @@ def start_game_logic():
                     # stage fail lighting & audio
                     red_dim(LED_COUNT)
                     gma.send_message("/gma3/cmd", "Lose Stage")
-                    trigger_reaper(addr16)             # Stop audio
-                    trigger_reaper(addr10)             # Stage lose audio
-                    trigger_reaper(addr15)             # Play audio 
+                    # Stop -> Stage Lose -> Play
+                    trigger_reaper(addr16)             # Stop
+                    trigger_reaper(addr10)             # Stage lose marker
+                    trigger_reaper(addr15)             # Play
                     ui.update("result", "Stage: Fail", "red")
 
                     tries += 1
@@ -391,9 +442,10 @@ def start_game_logic():
                         # game lose sequence
                         gma.send_message("/gma3/cmd", "Go+ sequence 32")  # follow-up lighting
                         gma.send_message("/gma3/cmd", "Go Sequence 104 cue 1")
-                        trigger_reaper(addr16)             # Stop audio
-                        trigger_reaper(addr12)             # Game Lose audio
-                        trigger_reaper(addr15)             # Play audio 
+                        # Stop -> Game Lose -> Play
+                        trigger_reaper(addr16)             # Stop
+                        trigger_reaper(addr12)             # Game lose marker
+                        trigger_reaper(addr15)             # Play
                         light_up(LED_COUNT, Color(255, 0, 0))
                         time.sleep(2)
                         light_up(LED_COUNT, 0)
