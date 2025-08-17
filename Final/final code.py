@@ -245,6 +245,12 @@ class GameUI:
         self.root.bind("<Escape>", lambda e: self.root.attributes("-fullscreen", False))
         self.root.bind("<space>", self.start_sequence)
 
+        # NEW: manual restart hotkey (R or r) to trigger countdown -> re-arm
+        self.root.bind("r", lambda e: self.restart_countdown(3))
+        self.root.bind("R", lambda e: self.restart_countdown(3))
+
+        self._restart_active = False  # internal guard to avoid overlapping countdowns
+
         font = ("Arial", 28)
         self.labels = {
             "level":  tk.Label(self.root, text="Level: 1",           font=font),
@@ -295,6 +301,37 @@ class GameUI:
         else:
             trigger_reaper(address)
         self.update("game", f"Audio: {label}", "purple")
+
+    # NEW: Restart countdown that forces re-arm after countdown
+    def restart_countdown(self, seconds=3):
+        """
+        Show a GUI countdown, then require re-arming (next sensor press arms).
+        Uses Tk 'after' to keep UI responsive and avoid thread issues.
+        """
+        global waiting, timing, start_time, timeout
+        if self._restart_active:
+            return  # already counting down
+
+        self._restart_active = True
+        timing = False
+        start_time = None
+        timeout = False
+        self.update("time", "Time: Paused")
+        self.update("game", f"Restart in {seconds}...", "orange")
+
+        def tick(remaining):
+            global waiting
+            if remaining > 0:
+                self.update("game", f"Restart in {remaining}...", "orange")
+                self.root.after(1000, tick, remaining - 1)
+            else:
+                # Do not arm automatically; require player to re-arm on next press
+                waiting = True
+                self.update("game", "Stage armed: press sensor again to start", "orange")
+                self._restart_active = False
+
+        # start ticking
+        self.root.after(1000, tick, seconds - 1)
 
 # -------- OSC Handler --------
 def print_args(addr_incoming, *args):
@@ -454,11 +491,11 @@ def start_game_logic():
                         timing = False
                         ui.update("time", "Time: Paused")
                     else:
-                        # allow re-arming same level on next press
-                        waiting = True
+                        # NEW: show GUI countdown, then require re-arming on next press
                         timing = False
                         start_time = None
                         ui.update("time", "Time: Paused")
+                        ui.restart_countdown(3)
 
             time.sleep(0.1)
 
