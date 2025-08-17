@@ -783,9 +783,9 @@ def trigger_startup_sequence(self, event=None):
     self.show_game_result("Ready")
 ```
 
-#### GUI to manually trigger lighting sequences
+### GUI to manually trigger lighting sequences
 
-### Which Command Sends grandMA3 Lighting When GUI Buttons Are Pressed
+#### Which Command Sends grandMA3 Lighting When GUI Buttons Are Pressed
 - Each lighting button in the GUI runs the following function when clicked:
 ```python
 def trigger_gma(self, command):
