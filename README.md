@@ -880,83 +880,169 @@ self.gma_client.send_message("/gma3/cmd", "Go sequence 104 cue 5")
 
 # Final - [Click Here](./Final/)
 
-### Final - [Click Here](./Final/)
-
-### 🧾 Overview
+## 🧾 Overview
 The Final build consolidates the game into a stable release with:
 - Debounced REAPER action triggering and direct marker events
 - Refined milestone → lighting/audio mapping
 - Manual UI controls for lighting and audio
 - Clear network endpoints for GrandMA3, REAPER, and the local OSC listener
 
-
+## 📚 Python Packages Used
 ```python
-GMA_IP, GMA_PORT       = "192.168.254.213", 2000  # GrandMA3 Console
-REAPER_IP, REAPER_PORT = "192.168.254.12",   8000 # REAPER Audio
-LOCAL_IP, LOCAL_PORT   = "192.168.254.108",  8006 # OSC listener (Pi)
-
-gma    = udp_client.SimpleUDPClient(GMA_IP, GMA_PORT)
-reaper = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+import time
+import threading
+import tkinter as tk
+from rpi_ws281x import *
+from pythonosc import udp_client, dispatcher, osc_server
 ```
 
-- GrandMA3: Receives lighting commands at `/gma3/cmd`
-- REAPER: Receives action/marker commands at `/action/...` or `/marker/...`
-- Local OSC: Listens on `LOCAL_IP:LOCAL_PORT` for sensor events on `/print`
+#### ⏰ time
+- Purpose: Timing controls and delays
+- Used For: `time.time()` for elapsed time tracking, `time.sleep()` for LED animations
+
+#### 🧵 threading
+- Purpose: Multi-threaded execution
+- Used For: Running OSC server, game logic, and GUI simultaneously without blocking
+
+#### 🖼️ tkinter
+- Purpose: GUI interface
+- Used For: Displaying game status, level info, timer, and results in fullscreen mode
+
+#### 💡 rpi_ws281x
+- Purpose: Control addressable LED strips
+- Used For: 300-LED strip animations, progress visualization, and stage feedback
+
+#### 📡 pythonosc
+- Purpose: OSC (Open Sound Control) communication
+- Used For: Bidirectional communication with REAPER audio and GrandMA3 lighting
 
 ---
 
-## Final Build — REAPER Audio Control Functions
+<br>
 
-### Overview
-Audio control uses a debounced wrapper to prevent rapid duplicate triggers, plus direct marker calls for stage/game events. This mirrors MVP but adds cooldown and transport-prepare actions.
-
-### Debounced Action Sender: `trigger_reaper(marker: str)`
-
+## 🌐 Network Setup
 ```python
-MARKER_COOLDOWN = 0.6      # seconds
-last_marker_time = {}      # marker -> last time sent
+GMA_IP, GMA_PORT       = "192.168.254.213", 2000  # GrandMA3 Console
+REAPER_IP, REAPER_PORT = "192.168.254.12", 8000   # REAPER Audio
+LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8001  # Game Controller
+```
+- **GrandMA3**: Receives lighting cue commands
+- **REAPER**: Receives audio marker triggers and playback control
+- **Local**: Listens for sensor input via OSC messages
 
-def trigger_reaper(marker: str):
-    """Debounced wrapper to fire a REAPER action only once per cooldown window."""
-    now = time.time()
-    if marker in last_marker_time and (now - last_marker_time[marker]) < MARKER_COOLDOWN:
-        return
-    last_marker_time[marker] = now
-    reaper.send_message("/action/40044", 1.0)   # optional: prepare/jump mode
-    reaper.send_message(f"/action/{marker}", 1.0)
-    reaper.send_message("/action/40045", 1.0)   # optional: resume/confirm
+---
+
+<br>
+
+## 🎵 REAPER Audio Control Functions — Develop by Yu Hang
+
+### 🧾 Overview
+In the Final build, REAPER audio is controlled via OSC using debounced triggers, direct marker calls, and background timers for seamless SFX/BGM transitions. This ensures reliable, non-repetitive audio cues and smooth integration with game events.
+
+---
+
+### 🌐 Network Configuration
+```python
+REAPER_IP, REAPER_PORT = "192.168.254.12", 8000  # REAPER Audio Workstation
+reaper = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+```
+- REAPER Software: Running on dedicated PC at IP 192.168.254.12
+- OSC Port: Listening on port 8000 for incoming commands
+- Protocol: OSC over UDP
+
+---
+
+### 🎵 Core Function: trigger_reaper(addr, msg=1.0)
+```python
+def trigger_reaper(addr, msg=1.0):
+    client = udp_client.SimpleUDPClient(REAPER_IP, REAPER_PORT)
+    client.send_message(addr, msg)
+```
+Purpose:
+- Sends a single OSC command to REAPER (action or marker)
+- Used for all audio triggers in the game
+#### Usage Example:
+```python
+trigger_reaper("/action/41261")  # Load Sound 1
+trigger_reaper("/marker/19")     # Stage Win SFX
 ```
 
-#### Purpose
-- Prevents duplicate REAPER actions if a sensor bounces.
-- Wraps action calls with optional pre/post actions (`40044/40045`) for safer transport behavior.
+---
 
-#### Usage Examples
+### ⏱️ Milestone SFX/BGM Logic
 ```python
-trigger_reaper("41261")  # Load Sound 1
-trigger_reaper("41270")  # Win Stage
+def play_sfx_then_bgm(sfx_addr, sfx_hold=1.2):
+    trigger_reaper(addr16)      # Stop
+    trigger_reaper(sfx_addr)    # Play SFX
+    trigger_reaper(addr15)      # Play
+    def _back_to_bgm():
+        trigger_reaper(addr16)
+        trigger_reaper(addr13)  # BGM Start
+        trigger_reaper(addr15)
+    bgm_timer = threading.Timer(sfx_hold, _back_to_bgm)
+    bgm_timer.daemon = True
+    bgm_timer.start()
+```
+#### purpose:
+- Plays a milestone SFX, then resumes BGM after a short delay
+- Non-blocking: uses a timer thread
+#### Usage Example:
+```python
+play_sfx_then_bgm("/action/41261", 1.2)  # Play SFX, then BGM
 ```
 
-### Direct Marker Triggers (events)
-Final build uses direct `/marker/...` for some events (no debounce):
+---
 
-```python
-reaper.send_message("/marker/18", 1.0)  # Stage Fail
-reaper.send_message("/marker/19", 1.0)  # Game Win
-reaper.send_message("/marker/20", 1.0)  # Game Lose
-```
-
-### Milestone Integration: `trigger_osc(n)`
-
+### 🎯 Milestone Integration
 ```python
 def trigger_osc(n):
-    # Maps four milestones per level to GMA cues and REAPER actions 41261..41264
-    # Ensures each milestone audio is fired once per level
+    # ...existing code...
+    if idx == 0:
+        play_sfx_then_bgm(addr,  SFX_HOLDS.get(1, 1.2))
+    elif idx == 1:
+        play_sfx_then_bgm(addr1, SFX_HOLDS.get(2, 1.2))
+    elif idx == 2:
+        play_sfx_then_bgm(addr2, SFX_HOLDS.get(3, 1.2))
+    elif idx == 3:
+        play_sfx_then_bgm(addr3, SFX_HOLDS.get(4, 1.2))
 ```
+#### purpose:
+- Couples player progress to milestone SFX and BGM transitions
+- Ensures each milestone triggers only once per level
 
-#### Purpose
-- Couples player progress to both lighting cues and REAPER audio per milestone.
-- Guarantees each milestone triggers once using an in-level `played_milestones` set.
+---
+
+### 🛡️ Error Prevention Features
+- Debounced triggers: Prevents duplicate SFX/marker actions
+- Transport control: Always stops before playing SFX/BGM
+- Background timers: Audio transitions do not block game logic
+
+---
+
+
+📡 OSC Address Mapping (Final)
+ Event            | OSC Address   | Description      |
+|:---------------:|:------------: |:---------------: |
+| Load sound 1    | /action/41261 | Milestone SFX    |
+| Load sound 2    | /action/41262 | Milestone SFX    |
+| Load sound 3    | /action/41263 | Milestone SFX    |
+| Load sound 4    | /action/41264 | Milestone SFX    |
+| Win stage       | /marker/19    | Win SFX          |
+| Lose stage      | /marker/20    | Lose SFX         |
+| Game Win        | /marker/21    | Game Win SFX     |
+| Game Lose       | /marker/22    | Game Lose SFX    |
+| BGM Start       | /marker/23    | Background Music |
+| Play            | /action/1007  | Transport Play   |
+| Stop            | /action/1016  | Transport Stop   |
+
+---
+
+### 🎮 Integration with Game Flow
+- Startup: Stop → BGM Start → Play
+- Milestone: Stop → SFX → Play → (timer) → Stop → BGM Start → Play
+- Stage/Game Win/Lose: Stop → Marker → Play
+
+---
 
 ### Game Startup (manual)
 
