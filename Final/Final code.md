@@ -43,8 +43,8 @@ This document explains *what happens*, *why it happens*, and *where to change th
 
 ## Quick Summary
 
-- **Input:** A sensor sends button-press events as OSC messages to the Pi at the address `/print`.
-- **Game:** There are **4 levels**. For each level you must press fast enough to reach a **goal** before **time** runs out.
+- **Input:** A pressure sensor sends press events as OSC messages to the Pi at the address `/print`.
+- **Game:** There are **4 levels**. For each level you must step fast enough to reach a **goal** before **time** runs out.
 - **Progress:** Each level has **4 milestones** (25%, 50%, 75%, 100%). Hitting a milestone:
   - Fills the LED strip proportionally,
   - Sends a **GrandMA3** cue,
@@ -63,8 +63,7 @@ This document explains *what happens*, *why it happens*, and *where to change th
 - **Network** access to:
   - **GrandMA3** console (OSC in),
   - **REAPER** machine (OSC in).
-
-> **Rule of thumb for LED power:** 5V supply, ~60mA per LED at full white (worst case). For 300 LEDs, budget >18A if you *ever* approach full white. We don’t do full white here, but size your PSU safely and inject power along the strip.
+- **Sensor** Pressure sensor 
 
 ---
 
@@ -128,16 +127,17 @@ LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8006   # Pi's local OSC server (sens
 
 ## How to Run (Step-by-Step)
 
-1. **Wire the LEDs** and power (see [Power & Wiring Notes](#appendix-power--wiring-notes)). Share **GND**.
-2. **Set IPs/ports** in the script to match your network.
-3. **Start** GrandMA3 and REAPER with OSC enabled.
-4. On the **Pi**, run:
+1. **Wire the LED Screen** and power 
+2. **Wire the Neopixel**
+3. **Set IPs/ports** in the script to match your network.
+4. **Start** GrandMA3 and REAPER with OSC enabled.
+5. On the **Pi**, run:
    ```bash
    sudo python3 your_script.py
    ```
-5. A **fullscreen** Tkinter window appears.
-6. Press **Space** once to run **Startup** (lights intro + start **BGM**). The game is now **Ready**.
-7. Press your **sensor** to arm the level, then press again to start the **timer**.
+6. A **fullscreen** Tkinter window appears on the respberry pi 7inch touchscreen display.
+7. Press **Space** once to run **Startup** (lights intro + start **BGM**). The game is now **Ready**.
+8. Press your **sensor** to arm the level, then press again to start the **timer**.
 
 ---
 
@@ -178,7 +178,7 @@ LOCAL_IP, LOCAL_PORT   = "192.168.254.108", 8006   # Pi's local OSC server (sens
 
 ---
 
-## Code Walkthrough (Plain English)
+## Code Walkthrough
 
 This section translates the code into everyday language. Where we mention Python words:
 
@@ -196,10 +196,10 @@ from rpi_ws281x import Adafruit_NeoPixel, Color
 from pythonosc import udp_client, dispatcher, osc_server
 ```
 
-- **time**: delays and measuring passing time.
+- **time**: delays and measurement of time.
 - **threading**: runs a tiny background timer used to resume **BGM** after SFX.
 - **tkinter**: creates the on-screen window.
-- **rpi_ws281x**: controls the LED strip (hardware driver).
+- **rpi_ws281x**: controls the Neopixel strip (hardware driver).
 - **python-osc**: sends/receives OSC messages.
 
 ### NeoPixel Setup
@@ -316,6 +316,8 @@ addr16 = "/action/1016"   # Stop
 ### GrandMA3 Milestone Commands
 
 For each level and milestone index (0..3), send a specific cue:
+
+- Changes the light for each milestone hit
 
 ```python
 gma_milestone_cmds = {
@@ -481,6 +483,8 @@ def restart_countdown(self, seconds=3):
    - At **100%** (goal): LEDs pulse then sweep green; **after** the sweep, **Stage Win** plays.
 5. **Next level** arms on next press. After Level 4 win, **Game Win** plays and the game resets to idle.
 
+**audio retriggers everytime a audio cue has been triggered**
+
 **Fail with auto-restart:**
 
 - Timer hits zero → red LED effect → **Stage Lose**; `tries += 1`.
@@ -492,6 +496,7 @@ def restart_countdown(self, seconds=3):
 
 - Press **R** at any time during a stage → **3s countdown** → force **waiting=True**.
 - Next sensor press re-arms (normal arming flow), preserving consistent show behavior.
+
 
 ---
 
@@ -597,8 +602,8 @@ oscsend 192.168.254.213 2000 /gma3/cmd s "Go Sequence 23 cue 1"
 
 > **Flow patterns:**  
 > • **Milestone:** Stop → SFX → Play → (timer) → Stop → BGM Start → Play  
-> • **Stage Win:** LEDs sweep first → marker → Play  
-> • **Stage Lose / Game Win / Game Lose:** Stop → marker → Play
+> • **Stage Win:** LEDs sweep first → marker → Play → BGM 
+> • **Stage Lose / Game Win / Game Lose:** Stop → marker → Play → BGM
 
 ### GrandMA3 (examples used)
 
@@ -607,14 +612,4 @@ oscsend 192.168.254.213 2000 /gma3/cmd s "Go Sequence 23 cue 1"
 - **Other status cues:** “Win Stage”, “Lose Stage”, `Go Sequence 103 cue 1`, `Go Sequence 104 cue 1`, `Go+ sequence 33`, `Go+ sequence 32`
 
 > These are plain text strings sent to `/gma3/cmd`. Adjust to your showfile **outside** of game logic.
-
----
-
-## Appendix: Power & Wiring Notes
-
-- **5V, high-current PSU** for the LEDs. Connect **+5V** and **GND** to the strip.  
-- **Share GND** between **Pi** and **strip** (critical for signaling).  
-- **Data line** from **Pi GPIO 18** → strip **DIN** through a **300–500Ω resistor** (good practice).  
-- For long strips, **inject power** every 1–2m to prevent dimming and color shift.
-
 
