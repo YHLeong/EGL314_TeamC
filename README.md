@@ -82,24 +82,72 @@ For the Neopixel, we used nano tape to tape the neopixel to the board in a light
 
 Photos for reference:
 
-![Buttons with sensors inside](Photos/Buttons.png)
 
-![Raspi Screen](Photos/Screen.png)
+<u>Buttons:</u>
 
-![Neopixel on the board with 3D printed mounts](Photos/Neopixel.png)
+![Buttons with sensors inside](AssetsFolder/Buttons.png)
+We use 2 pieces of cardboard to sandwich the car seat sensor. On the top layer we carved out numbers 1 to 6. We then spray painted they grey
+<br>
+<br>
+<u>Screen:</u>
 
-![Box/Generator]Photos/(Box.png)
+![Raspi Screen](AssetsFolder/Screen.png)
 
-![Station 2](Photos/Station_2.png)
+We built a angled cardboard holder for the screen. This screen is used for the players and gamemaster to know the current state of the game
+<br>
+<br> 
+<u>Neopixel & Board:</u>
+
+![Neopixel on the board with 3D printed mounts](AssetsFolder/Neopixel.png)
+
+This is our Neopixel. We mounted it on the board using nano tape in a lightning shape. Its a visual aid to allow the players and audience to know how close they are to winning
+<br>
+<br> 
+<u>Box/Generator:</u>
+
+![Box/Generator](AssetsFolder/Box.png)
+
+This is the box we are using as our 'generator' and where we store our electronics. 
+<br>
+<br> 
+<u>Station 2:</u>
+
+![Station 2](AssetsFolder/Station_2.png)
 
 
 
----
 
 # System Diagram
-![System Diagram](AssetsFolder/SystemDiagram_Updated.png)
 
----
+```mermaid
+graph LR
+
+    Sensor1 --Dupont wire(22)----> RaspberryPi_Client
+    Sensor2 --Dupont Wire(6)----> RaspberryPi_Client
+    Sensor3 --Dupont Wire(19)----> RaspberryPi_Client
+    Sensor4 --Dupont Wire(16)----> RaspberryPi_Client
+    Sensor5 --Dupont Wire(20)----> RaspberryPi_Client
+    Sensor6 --Dupont Wire(21)----> RaspberryPi_Client
+
+    RaspberryPi_Client --Wireless-->RaspberryPi_Server
+
+
+
+    RaspberryPi_Server --Wireless--> RaspberryPi_Master
+    RaspberryPi_Master --wireless--> Laptop_Reaper
+    Laptop_Reaper --LAN--> Yamaha_QL1
+    RaspberryPi_Master --LAN--> GrandMA3
+
+    GrandMA3 ---LAN--> sCAN
+    sCAN --DMX --> Lighting_fixures
+    Yamaha_QL1 --DANTE(LAN)--> Yamaha_MTX-5
+    Yamaha_MTX-5 --Terminal Block--> Yamaha_VXS5_#1
+    Yamaha_MTX-5 --Terminal Block--> Yamaha_VXS5_#12
+
+
+```
+
+
 
 ---
 
