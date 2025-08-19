@@ -133,7 +133,7 @@ addr7  = "/action/41268"  # Stage 2 armed SFX
 addr8  = "/action/41269"  # Stage 3/4 armed SFX
 
 # Stage/game outcomes (actions/markers)
-addr9  = "/marker/19"     # Marker 19 — Stage Win SFX
+addr9  = "/action/41270"  # Marker 19 — Stage Win SFX
 addr10 = "/marker/20"     # Marker 20 — Stage Lose
 addr11 = "/marker/21"     # Marker 21 — Game Win (present and used)
 addr12 = "/marker/22"     # Marker 22 — Game Lose
@@ -410,13 +410,12 @@ def print_args(addr_incoming, *args):
     # Stage complete
     if count == goals[level]:
         flash_bpm(LED_COUNT)               # green pulse x3 (duration-limited)
-        green_dim(LED_COUNT)               # green sweep
-        gma.send_message("/gma3/cmd", "Win Stage")
-
         # --- Stage Win audio AFTER green wipe: 41270 + Play (no Stop) ---
+        trigger_reaper(addr16)             # Stop (transport)
         trigger_reaper(addr9)              # /action/41270
         trigger_reaper(addr15)             # /action/1007
-
+        green_dim(LED_COUNT)               # green sweep
+        gma.send_message("/gma3/cmd", "Win Stage")
         gma.send_message("/gma3/cmd", "Go+ sequence 33")   # follow-up lighting
         shutdown_sequences()
         ui.update("result", "Stage: Win", "green")
