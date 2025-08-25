@@ -414,9 +414,12 @@ def print_args(addr_incoming, *args):
         trigger_reaper(addr16)             # Stop (transport)
         trigger_reaper(addr9)              # /action/41270
         trigger_reaper(addr15)             # /action/1007
+        # --- NeoPixel green sweep + BGM Start (loop) ---
         green_dim(LED_COUNT)               # green sweep
+        # --- GrandMA commands for stage win ---
         gma.send_message("/gma3/cmd", "Win Stage")
         gma.send_message("/gma3/cmd", "Go+ sequence 33")   # follow-up lighting
+        # --- Stop all sequences before next stage ---
         shutdown_sequences()
         ui.update("result", "Stage: Win", "green")
 

@@ -59,7 +59,8 @@ class AVControlGUI:
             "End Transition": "Go sequence 83 cue 1",
             "End buttons": "Go sequence 83 cue+",
             "End Sequence": "Go sequence 13 cue 1",
-            "Turn Off All Lights": "Off sequence thru please"
+            "Turn Off All Lights": "Off sequence thru please",
+            "phtography": "Go sequence 120 cue 1"
         }
 
         self.create_widgets()

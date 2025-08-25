@@ -106,7 +106,8 @@ class AVControlGUI:
             "End Transition": "Go sequence 83 cue 1",
             "End buttons": "Go sequence 83 cue+",
             "End Sequence": "Go sequence 13 cue 1",
-            "Turn Off All Lights": "Off sequence thru please"
+            "Turn Off All Lights": "Off sequence thru please",
+            "phtography": "Go sequence 120 cue 1"
         }
 
         # Build UI
@@ -286,6 +287,15 @@ class AVControlGUI:
             if c >= cols:
                 c = 0
                 r += 1
+
+        # Add Photography button if not present
+        if "phtography" not in self.gma_cues:
+            btn = self._chip_button(
+                grid, "Photography", self.COLORS["warn"],
+                lambda: self.trigger_gma("Go sequence 120 cue 1"),
+                dark=True
+            )
+            btn.grid(row=r, column=c, padx=6, pady=6, sticky="ew")
 
     def _quick_actions(self, parent):
         grid = tk.Frame(parent, bg=self.COLORS["panel2"])
